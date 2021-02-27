@@ -1,7 +1,9 @@
 package main
 
-import "github.com/m-mizutani/catbox/pkg/interfaces"
+import (
+	"github.com/m-mizutani/catbox/pkg/controller"
+)
 
-func handlePeriodicEvent(args *interfaces.Config, event cloudWatchEvent) error {
+func handlePeriodicEvent(args *controller.Controller, event cloudWatchEvent) error {
 	return nil
 }

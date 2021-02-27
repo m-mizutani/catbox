@@ -1,4 +1,4 @@
-package service
+package controller
 
 import (
 	"encoding/json"
@@ -131,14 +131,14 @@ func extractAccountFromRegistry(registry string) (string, error) {
 }
 
 // Hint: Not thread safe
-func (x *Service) setupECRClient(region string) error {
+func (x *Controller) setupECRClient(region string) error {
 	if x.ecrClient != nil {
 		return nil
 	}
 
-	ecrClient, err := x.args.Adaptors.NewECR(region)
+	ecrClient, err := x.NewECR(region)
 	if err != nil {
-		return golambda.WrapError(err, "Creating S3 client").With("region", x.args.S3Region)
+		return golambda.WrapError(err, "Creating S3 client").With("region", x.S3Region)
 	}
 
 	x.ecrClient = ecrClient
@@ -146,7 +146,7 @@ func (x *Service) setupECRClient(region string) error {
 }
 
 // GetRegistryAPIToken gets registry access token via ecr.GetAuthorizationToken.
-func (x *Service) GetRegistryAPIToken(registry string) (*string, error) {
+func (x *Controller) GetRegistryAPIToken(registry string) (*string, error) {
 	ecrRegion, err := extractRegionFromRegistry(registry)
 	if err != nil {
 		return nil, err
@@ -172,7 +172,7 @@ func (x *Service) GetRegistryAPIToken(registry string) (*string, error) {
 }
 
 // GetImageManifest
-func (x *Service) GetImageManifest(target *model.Image, authToken string) (*imageManifestResult, error) {
+func (x *Controller) GetImageManifest(target *model.Image, authToken string) (*imageManifestResult, error) {
 	reference := target.Digest
 	if reference == "" {
 		reference = target.Tag
@@ -187,7 +187,7 @@ func (x *Service) GetImageManifest(target *model.Image, authToken string) (*imag
 	req.Header.Add("Authorization", "Basic "+authToken)
 	req.Header.Add("Accept", "*/*")
 
-	resp, err := x.args.Adaptors.HTTP.Do(req)
+	resp, err := x.HTTP.Do(req)
 	if err != nil {
 		return nil, golambda.WrapError(err, "Fail to send http request to registry").With("target", target)
 	} else if resp.StatusCode != http.StatusOK {
@@ -230,7 +230,7 @@ func (x *Service) GetImageManifest(target *model.Image, authToken string) (*imag
 	}
 }
 
-func (x *Service) getImageEnv(manifest *imageManifestResult, target *model.Image, authToken string) ([]string, error) {
+func (x *Controller) getImageEnv(manifest *imageManifestResult, target *model.Image, authToken string) ([]string, error) {
 	url := fmt.Sprintf("https://%s/v2/%s/blobs/%s", target.Registry, target.Repo, manifest.Config.Digest)
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -240,7 +240,7 @@ func (x *Service) getImageEnv(manifest *imageManifestResult, target *model.Image
 	req.Header.Add("Authorization", "Basic "+authToken)
 	req.Header.Add("Accept", manifest.MediaType)
 
-	resp, err := x.args.Adaptors.HTTP.Do(req)
+	resp, err := x.HTTP.Do(req)
 	if err != nil {
 		return nil, golambda.WrapError(err, "Fail to send http request to get blobs").With("url", url).With("target", target)
 	} else if resp.StatusCode != 200 {

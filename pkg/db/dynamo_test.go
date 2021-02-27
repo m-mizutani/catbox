@@ -3,7 +3,6 @@ package db_test
 import (
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/m-mizutani/catbox/pkg/db"
 	"github.com/m-mizutani/catbox/pkg/model"
 	"github.com/stretchr/testify/assert"
@@ -11,23 +10,23 @@ import (
 )
 
 func newTestTable(t *testing.T) *db.DynamoClient {
-	tableName := "test-" + uuid.New().String()
-	t.Log("Created table name: ", tableName)
+	tableName := "dynamodb-test"
 
 	client, err := db.NewDynamoClientLocal("ap-northeast-1", tableName)
 	if err != nil {
 		panic("Failed to use local DynamoDB: " + err.Error())
 	}
+
+	t.Log("Created table name: ", client.TableName())
 	return client
 }
 
 func deleteTestTable(t *testing.T, client *db.DynamoClient) {
-	t.Logf("done: %v", t.Failed())
 	if t.Failed() {
 		return // Failed test table is not deleted
 	}
 
-	if err := client.DestroyTable(); err != nil {
+	if err := client.Close(); err != nil {
 		panic("Failed to delete test table: " + err.Error())
 	}
 }
@@ -158,13 +157,11 @@ func TestScanReport(t *testing.T) {
 			assert.Equal(t, resp, report1)
 		})
 
-		/*
-			t.Run("Not found with invalid report ID", func(t *testing.T) {
-				resp, err := client.GetBatchScanReportByID([]string{"?"})
-				require.NoError(t, err)
-				assert.Equal(t, 0, len(resp))
-			})
-		*/
+		t.Run("Not found with invalid report ID", func(t *testing.T) {
+			resp, err := client.GetScanReportByID("?")
+			require.NoError(t, err)
+			assert.Nil(t, resp)
+		})
 
 		t.Run("Lookup with repo", func(t *testing.T) {
 			resp, err := client.GetLatestScanReportsByRepo("1111111111.dkr.ecr.ap-northeast-1.amazonaws.com", "star", "main")
@@ -215,14 +212,18 @@ func TestImageLayerDigests(t *testing.T) {
 		require.NoError(t, client.PutImageLayerDigest(idx2))
 		require.NoError(t, client.PutImageLayerDigest(idx3))
 
-		layers, err := client.LookupImageLayerDigests([]string{"aaaaaa", "bbbbbb", "caffee", "cccccc", "beef00", "dddddd"})
+		layer1, err := client.LookupImageLayerDigest("caffee")
 		require.NoError(t, err)
-		require.Equal(t, 6, len(layers))
-		require.Nil(t, layers[0])
-		require.Nil(t, layers[1])
-		require.Equal(t, idx1, layers[2])
-		require.Nil(t, layers[3])
-		require.Equal(t, idx2, layers[4])
-		require.Nil(t, layers[5])
+		require.Equal(t, 1, len(layer1))
+		assert.Equal(t, layer1[0], idx1)
+
+		layer2, err := client.LookupImageLayerDigest("beef00")
+		require.NoError(t, err)
+		require.Equal(t, 1, len(layer2))
+		assert.Equal(t, layer2[0], idx2)
+
+		layer3, err := client.LookupImageLayerDigest("?")
+		require.NoError(t, err)
+		require.Equal(t, 0, len(layer3))
 	})
 }

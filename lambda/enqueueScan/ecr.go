@@ -6,9 +6,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/m-mizutani/catbox/pkg/interfaces"
+	"github.com/m-mizutani/catbox/pkg/controller"
 	"github.com/m-mizutani/catbox/pkg/model"
-	"github.com/m-mizutani/catbox/pkg/service"
 	"github.com/m-mizutani/golambda"
 )
 
@@ -34,7 +33,7 @@ func parseRepositoryARN(arn string) (string, string, error) {
 	return fmt.Sprintf("%s.dkr.ecr.%s.amazonaws.com", arnParts[4], arnParts[3]), repoParts[1], nil
 }
 
-func handleECREvent(config *interfaces.Config, event cloudWatchEvent) error {
+func handleECREvent(ctrl *controller.Controller, event cloudWatchEvent) error {
 	logger.With("event", event).Info("handleECREvent")
 
 	if "PutImage" != event.Detail.EventName {
@@ -46,8 +45,6 @@ func handleECREvent(config *interfaces.Config, event cloudWatchEvent) error {
 	if err != nil {
 		return golambda.WrapError(err, "Parsing eventTime of ECR event")
 	}
-
-	svc := service.New(config)
 
 	for _, rsc := range event.Detail.Resources {
 		registry, repo, err := parseRepositoryARN(rsc.Arn)
@@ -68,12 +65,12 @@ func handleECREvent(config *interfaces.Config, event cloudWatchEvent) error {
 			RequestedBy: "ecr.PushImage",
 			RequestedAt: ts,
 			Target:      target,
-			S3Region:    config.S3Region,
-			S3Bucket:    config.S3Bucket,
-			S3Prefix:    config.S3Prefix + basePrefix,
+			S3Region:    ctrl.S3Region,
+			S3Bucket:    ctrl.S3Bucket,
+			S3Prefix:    ctrl.S3Prefix + basePrefix,
 		}
 
-		if err := svc.SendScanRequest(req); err != nil {
+		if err := ctrl.SendScanRequest(req); err != nil {
 			return golambda.WrapError(err).With("req", req)
 		}
 		logger.With("req", req).Info("Sent scan request")

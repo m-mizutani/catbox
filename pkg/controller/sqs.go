@@ -1,4 +1,4 @@
-package service
+package controller
 
 import (
 	"encoding/json"
@@ -10,22 +10,22 @@ import (
 )
 
 // Hint: Not thread safe
-func (x *Service) setupSQSClient() error {
+func (x *Controller) setupSQSClient() error {
 	if x.sqsClient != nil {
 		return nil
 	}
 
 	// catbox sends to only SQS queue in same region with Lambda.
-	sqsClient, err := x.config.Adaptors.NewSQS(x.config.AwsRegion)
+	sqsClient, err := x.NewSQS(x.AwsRegion)
 	if err != nil {
-		return golambda.WrapError(err, "Failed to create SQS client").With("region", x.config.AwsRegion)
+		return golambda.WrapError(err, "Failed to create SQS client").With("region", x.AwsRegion)
 	}
 
 	x.sqsClient = sqsClient
 	return nil
 }
 
-func (x *Service) sendSQSMessage(url string, data interface{}) error {
+func (x *Controller) sendSQSMessage(url string, data interface{}) error {
 	// Run setup only leveraged to avoid high frequency AssumeRole call
 	if err := x.setupSQSClient(); err != nil {
 		return err
@@ -47,10 +47,10 @@ func (x *Service) sendSQSMessage(url string, data interface{}) error {
 	return nil
 }
 
-func (x *Service) SendScanRequest(msg *model.ScanRequestMessage) error {
-	return x.sendSQSMessage(x.config.ScanQueueURL, msg)
+func (x *Controller) SendScanRequest(msg *model.ScanRequestMessage) error {
+	return x.sendSQSMessage(x.ScanQueueURL, msg)
 }
 
-func (x *Service) SendInspectRequest(msg *model.InspectRequestMessage) error {
-	return x.sendSQSMessage(x.config.InspectQueueURL, msg)
+func (x *Controller) SendInspectRequest(msg *model.InspectRequestMessage) error {
+	return x.sendSQSMessage(x.InspectQueueURL, msg)
 }

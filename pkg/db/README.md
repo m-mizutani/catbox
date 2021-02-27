@@ -9,8 +9,8 @@
 - SK: `{registry}/{repository}`
 
 ### Image layer digests index
-- PK: `layer_digest:{digest}`
-- SK: `{registry}/{repository}`
+- PK: `layer_digest:{layer_digest}`
+- SK: `{registry}/{repository}:{digest}`
 
 ## Vulnerability
 

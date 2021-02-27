@@ -1,4 +1,4 @@
-package service
+package controller
 
 import (
 	"path/filepath"
@@ -42,7 +42,7 @@ func trivyCacheMetadataKey(prefix string) string {
 	return prefix + trivyCacheMetadataKeyPart
 }
 
-func (x *Service) downloadTrivyDB(localDir string) error {
+func (x *Controller) downloadTrivyDB(localDir string) error {
 	dbPath := filepath.Join(localDir, trivyCacheDBPathPart)
 
 	if err := x.downloadS3Object(trivyCacheDBKeyPart, dbPath); err != nil {
@@ -57,14 +57,14 @@ func (x *Service) downloadTrivyDB(localDir string) error {
 	return nil
 }
 
-func (x *Service) uploadTrivyReport(report *model.TrivyResults, req *model.ScanRequestMessage) error {
+func (x *Controller) uploadTrivyReport(report *model.TrivyResults, req *model.ScanRequestMessage) error {
 	return nil
 }
 
-func (x *Service) DownloadTrivyReport(report *model.TrivyResults) {}
+func (x *Controller) DownloadTrivyReport(report *model.TrivyResults) {}
 
 // ScanImage setup DB and metadata, then invokes trivy command by exec.Command
-func (x *Service) ScanImage(img model.Image) ([]report.Result, error) {
+func (x *Controller) ScanImage(img model.Image) ([]report.Result, error) {
 	localDir := "/tmp"
 
 	if err := x.downloadTrivyDB(localDir); err != nil {
@@ -73,7 +73,7 @@ func (x *Service) ScanImage(img model.Image) ([]report.Result, error) {
 
 	imagePath := img.RegistryRepoTag()
 
-	tmpName, err := x.config.Adaptors.TempFile("", "output*.json")
+	tmpName, err := x.TempFile("", "output*.json")
 	if err != nil {
 		return nil, golambda.WrapError(err, "Fail to create temp file for trivy output")
 	}
@@ -100,7 +100,7 @@ func (x *Service) ScanImage(img model.Image) ([]report.Result, error) {
 		"Invalid yarn.lock format:", // Ignore old yarn schema
 	}
 
-	out, err := x.config.Adaptors.Exec("./trivy", trivyOptions...)
+	out, err := x.Exec("./trivy", trivyOptions...)
 	logger.With("out", string(out)).Debug("Done trivy command")
 
 	if err != nil {
@@ -113,7 +113,7 @@ func (x *Service) ScanImage(img model.Image) ([]report.Result, error) {
 		return nil, golambda.WrapError(err, "Fail to invoke trivy command")
 	}
 
-	trivyOutput, err := x.config.Adaptors.ReadFile(tmpName)
+	trivyOutput, err := x.ReadFile(tmpName)
 	if err != nil {
 		return nil, golambda.WrapError(err, "Fail to read trivy output temp file").With("tmpName", tmpName)
 	}

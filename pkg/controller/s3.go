@@ -1,4 +1,4 @@
-package service
+package controller
 
 import (
 	"bytes"
@@ -11,30 +11,30 @@ import (
 )
 
 // Hint: Not thread safe
-func (x *Service) setupS3Client() error {
+func (x *Controller) setupS3Client() error {
 	if x.s3Client != nil {
 		return nil
 	}
 
 	// catbox accesses to S3 bucket specified by S3Region.
-	s3Client, err := x.config.Adaptors.NewS3(x.config.S3Region)
+	s3Client, err := x.NewS3(x.S3Region)
 	if err != nil {
-		return golambda.WrapError(err, "Creating S3 client").With("region", x.config.S3Region)
+		return golambda.WrapError(err, "Creating S3 client").With("region", x.S3Region)
 	}
 
 	x.s3Client = s3Client
 	return nil
 }
 
-// downloadS3Object downloads object s3://{x.config.S3Bucket}/{x.config.S3Prefix}{suffixKey} to file:///{dstPath}
-func (x *Service) downloadS3Object(suffixKey, dstPath string) error {
+// downloadS3Object downloads object s3://{x.S3Bucket}/{x.S3Prefix}{suffixKey} to file:///{dstPath}
+func (x *Controller) downloadS3Object(suffixKey, dstPath string) error {
 	if err := x.setupS3Client(); err != nil {
 		return err
 	}
 
 	input := &s3.GetObjectInput{
-		Bucket: aws.String(x.config.S3Bucket),
-		Key:    aws.String(x.config.S3Prefix + suffixKey),
+		Bucket: aws.String(x.S3Bucket),
+		Key:    aws.String(x.S3Prefix + suffixKey),
 	}
 
 	output, err := x.s3Client.GetObject(input)
@@ -43,11 +43,11 @@ func (x *Service) downloadS3Object(suffixKey, dstPath string) error {
 	}
 	defer output.Body.Close()
 
-	if err := x.config.Adaptors.MkdirAll(filepath.Dir(dstPath), 0777); err != nil {
+	if err := x.MkdirAll(filepath.Dir(dstPath), 0777); err != nil {
 		return golambda.WrapError(err, "Failed to create %s directory", filepath.Dir(dstPath))
 	}
 
-	file, err := x.config.Adaptors.Create(dstPath)
+	file, err := x.Create(dstPath)
 	if err != nil {
 		return golambda.WrapError(err, "cannot save file")
 	}
@@ -59,19 +59,19 @@ func (x *Service) downloadS3Object(suffixKey, dstPath string) error {
 	return nil
 }
 
-func (x *Service) uploadS3Object(suffixKey, srcPath string) error {
+func (x *Controller) uploadS3Object(suffixKey, srcPath string) error {
 	if err := x.setupS3Client(); err != nil {
 		return err
 	}
 
-	data, err := x.config.Adaptors.ReadFile(srcPath)
+	data, err := x.ReadFile(srcPath)
 	if err != nil {
 		return golambda.WrapError(err, "Read file to upload S3 object").With("srcPath", srcPath)
 	}
 
 	input := &s3.PutObjectInput{
-		Bucket: aws.String(x.config.S3Bucket),
-		Key:    aws.String(x.config.S3Prefix + suffixKey),
+		Bucket: aws.String(x.S3Bucket),
+		Key:    aws.String(x.S3Prefix + suffixKey),
 		Body:   bytes.NewReader(data),
 	}
 

@@ -15,8 +15,22 @@ func (x *Image) RegistryRepoTag() string {
 	return x.Registry + "/" + x.Repo + ":" + x.Tag
 }
 
+// RegistryRepoDigest returns "{registry}/{repo}:{digest}"
+func (x *Image) RegistryRepoDigest() string {
+	return x.Registry + "/" + x.Repo + ":" + x.Digest
+}
+
 type ImageLayerIndex struct {
 	DBBaseRecord
 	Image
 	LayerDigest string `dynamo:"layer_digest" json:"layer_digest"`
+}
+
+func ImageLayerIndexPK(layerDigest string) string {
+	return "layer_digest:" + layerDigest
+}
+
+func (x *ImageLayerIndex) AssignKeys() {
+	x.PK = ImageLayerIndexPK(x.LayerDigest)
+	x.SK = x.Image.RegistryRepoDigest()
 }

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/m-mizutani/catbox/pkg/interfaces"
+	"github.com/m-mizutani/catbox/pkg/controller"
 	"github.com/m-mizutani/golambda"
 )
 
@@ -9,10 +9,7 @@ var logger = golambda.Logger
 
 func main() {
 	golambda.Start(func(event golambda.Event) (interface{}, error) {
-		args, err := interfaces.NewConfig()
-		if err != nil {
-			return nil, golambda.WrapError(err).With("event", event)
-		}
+		ctrl := controller.New()
 
 		var cwEvent cloudWatchEvent
 		if err := event.Bind(&cwEvent); err != nil {
@@ -21,12 +18,12 @@ func main() {
 
 		switch cwEvent.Source {
 		case "aws.ecr":
-			if err := handleECREvent(args, cwEvent); err != nil {
+			if err := handleECREvent(ctrl, cwEvent); err != nil {
 				return nil, golambda.WrapError(err).With("event", cwEvent)
 			}
 
 		case "aws.events":
-			if err := handlePeriodicEvent(args, cwEvent); err != nil {
+			if err := handlePeriodicEvent(ctrl, cwEvent); err != nil {
 				return nil, golambda.WrapError(err).With("event", cwEvent)
 			}
 

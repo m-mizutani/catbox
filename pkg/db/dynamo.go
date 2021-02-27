@@ -80,21 +80,19 @@ func NewDynamoClientLocal(region, tableName string) (*DynamoClient, error) {
 
 	table := dynamo.New(ssn).Table(tableName)
 	return &DynamoClient{
-		local: true,
-		table: table,
+		local:     true,
+		table:     table,
+		tableName: tableName,
 	}, nil
 }
 
-// DestroyTable deletes table in local DynamoDB. It will panic if trying delete of remote DynamoDB table.
-func (x *DynamoClient) DestroyTable() error {
-	if !x.local {
-		panic("DO NOT call DestroyTable for remote DynamoDB table")
+// Close deletes table if table is in local DynamoDB.
+func (x *DynamoClient) Close() error {
+	if x.local {
+		if err := x.table.DeleteTable().Run(); err != nil {
+			return err
+		}
 	}
-
-	if err := x.table.DeleteTable().Run(); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -188,10 +186,45 @@ func (x *DynamoClient) GetLatestScanReportsByRepo(registry, repo, tag string) (*
 	return &resp, nil
 }
 
+// PutImageLayerDigest inserts layerDigest
 func (x *DynamoClient) PutImageLayerDigest(layerDigest *model.ImageLayerIndex) error {
+	layerDigest.AssignKeys()
+
+	if err := x.table.Put(layerDigest).Run(); err != nil {
+		return golambda.WrapError(err, "PutImageLayerDigest").With("layerDigest", layerDigest)
+	}
 	return nil
 }
 
-func (x *DynamoClient) LookupImageLayerDigests(digests []string) ([]*model.ImageLayerIndex, error) {
-	return nil, nil
+func (x *DynamoClient) LookupImageLayerDigest(digest string) ([]*model.ImageLayerIndex, error) {
+	pk := model.ImageLayerIndexPK(digest)
+
+	var resp []*model.ImageLayerIndex
+	if err := x.table.Get("pk", pk).All(&resp); err != nil {
+		return nil, golambda.WrapError(err, "LookupImageLayerDigests").With("digest", digest)
+	}
+	return resp, nil
 }
+
+/*
+type keyed struct {
+	pk string
+	sk string
+}
+
+func (x *keyed) HashKey() interface{}  { return x.pk }
+func (x *keyed) RangeKey() interface{} { return "-" }
+
+func (x *DynamoClient) LookupImageLayerDigests(digests []string) ([]*model.ImageLayerIndex, error) {
+	var keys []dynamo.Keyed
+	for _, digest := range digests {
+		keys = append(keys, &keyed{pk: digest})
+	}
+
+	var resp []*model.ImageLayerIndex
+	if err := x.table.Batch("pk").Get(keys...).All(&resp); err != nil {
+		return nil, golambda.WrapError(err, "LookupImageLayerDigests").With("digests", digests)
+	}
+	return resp, nil
+}
+*/
