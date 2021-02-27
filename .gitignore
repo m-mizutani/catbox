@@ -11,3 +11,6 @@ cdk.out
 .parcel-cache
 
 *.sh
+.vscode
+build
+tmp

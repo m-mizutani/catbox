@@ -8,7 +8,7 @@ import (
 	"regexp"
 
 	"github.com/aws/aws-sdk-go/service/ecr"
-	"github.com/m-mizutani/catbox/pkg/models"
+	"github.com/m-mizutani/catbox/pkg/model"
 	"github.com/m-mizutani/golambda"
 )
 
@@ -172,7 +172,7 @@ func (x *Service) GetRegistryAPIToken(registry string) (*string, error) {
 }
 
 // GetImageManifest
-func (x *Service) GetImageManifest(target *models.Image, authToken string) (*imageManifestResult, error) {
+func (x *Service) GetImageManifest(target *model.Image, authToken string) (*imageManifestResult, error) {
 	reference := target.Digest
 	if reference == "" {
 		reference = target.Tag
@@ -230,7 +230,7 @@ func (x *Service) GetImageManifest(target *models.Image, authToken string) (*ima
 	}
 }
 
-func (x *Service) getImageEnv(manifest *imageManifestResult, target *models.Image, authToken string) ([]string, error) {
+func (x *Service) getImageEnv(manifest *imageManifestResult, target *model.Image, authToken string) ([]string, error) {
 	url := fmt.Sprintf("https://%s/v2/%s/blobs/%s", target.Registry, target.Repo, manifest.Config.Digest)
 
 	req, err := http.NewRequest("GET", url, nil)

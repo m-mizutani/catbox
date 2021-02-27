@@ -1,23 +1,22 @@
 package service
 
 import (
-	"github.com/m-mizutani/catbox/pkg/adaptor"
-	"github.com/m-mizutani/catbox/pkg/handler"
+	"github.com/m-mizutani/catbox/pkg/interfaces"
 	"github.com/m-mizutani/golambda"
 )
 
 var logger = golambda.Logger
 
 type Service struct {
-	args *handler.Arguments
+	config *interfaces.Config
 
-	s3Client  adaptor.S3Client
-	sqsClient adaptor.SQSClient
-	ecrClient adaptor.ECRClient
+	s3Client  interfaces.S3Client
+	sqsClient interfaces.SQSClient
+	ecrClient interfaces.ECRClient
 }
 
-func New(args *handler.Arguments) *Service {
+func New(config *interfaces.Config) *Service {
 	return &Service{
-		args: args,
+		config: config,
 	}
 }

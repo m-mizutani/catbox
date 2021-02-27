@@ -1,4 +1,4 @@
-package models
+package model
 
 // Image is docker image identifier
 type Image struct {

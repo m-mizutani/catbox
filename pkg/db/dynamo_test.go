@@ -5,23 +5,23 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/m-mizutani/catbox/pkg/db"
-	"github.com/m-mizutani/catbox/pkg/models"
+	"github.com/m-mizutani/catbox/pkg/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func newTestTable(t *testing.T) *db.DBClient {
+func newTestTable(t *testing.T) *db.DynamoClient {
 	tableName := "test-" + uuid.New().String()
 	t.Log("Created table name: ", tableName)
 
-	client, err := db.NewDBClientLocal("ap-northeast-1", tableName)
+	client, err := db.NewDynamoClientLocal("ap-northeast-1", tableName)
 	if err != nil {
 		panic("Failed to use local DynamoDB: " + err.Error())
 	}
 	return client
 }
 
-func deleteTestTable(t *testing.T, client *db.DBClient) {
+func deleteTestTable(t *testing.T, client *db.DynamoClient) {
 	t.Logf("done: %v", t.Failed())
 	if t.Failed() {
 		return // Failed test table is not deleted
@@ -32,9 +32,9 @@ func deleteTestTable(t *testing.T, client *db.DBClient) {
 	}
 }
 
-func newRepoVulnStatusTemplate() *models.RepoVulnStatus {
-	return &models.RepoVulnStatus{
-		Image: models.Image{
+func newRepoVulnStatusTemplate() *model.RepoVulnStatus {
+	return &model.RepoVulnStatus{
+		Image: model.Image{
 			Registry: "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
 			Repo:     "test-image",
 			Tag:      "good-tag",
@@ -43,8 +43,8 @@ func newRepoVulnStatusTemplate() *models.RepoVulnStatus {
 
 		VulnID:    "CVE-2001-1234",
 		UpdatedAt: 12345,
-		Status:    models.VulnStatusNew,
-		ScanType:  models.ScanTypeTrivy,
+		Status:    model.VulnStatusNew,
+		ScanType:  model.ScanTypeTrivy,
 
 		PkgSource:        "/tmp/Gemfile.lock",
 		PkgName:          "nanika",
@@ -54,15 +54,15 @@ func newRepoVulnStatusTemplate() *models.RepoVulnStatus {
 	}
 }
 
-func newScanReporTemplate() *models.ScanReport {
-	return &models.ScanReport{
-		Image: models.Image{
+func newScanReporTemplate() *model.ScanReport {
+	return &model.ScanReport{
+		Image: model.Image{
 			Registry: "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
 			Repo:     "star",
 			Tag:      "main",
 			Digest:   "12345678",
 		},
-		ScanType:    models.ScanTypeTrivy,
+		ScanType:    model.ScanTypeTrivy,
 		RequestedAt: 123456,
 		RequestedBy: "ecr.PutImage",
 		InvokedAt:   234567,
@@ -86,7 +86,7 @@ func TestRepoVulnStatus(t *testing.T) {
 		otherRepo := newRepoVulnStatusTemplate() // Must not be found by status1 image
 		otherRepo.Repo = "other-repo"
 
-		require.NoError(t, client.PutRepoVulnStatusBatch([]*models.RepoVulnStatus{
+		require.NoError(t, client.PutRepoVulnStatusBatch([]*model.RepoVulnStatus{
 			status1, status2, otherRepo,
 		}))
 
@@ -112,12 +112,12 @@ func TestRepoVulnStatus(t *testing.T) {
 		defer deleteTestTable(t, client)
 
 		status1 := newRepoVulnStatusTemplate()
-		require.NoError(t, client.PutRepoVulnStatusBatch([]*models.RepoVulnStatus{status1}))
+		require.NoError(t, client.PutRepoVulnStatusBatch([]*model.RepoVulnStatus{status1}))
 
 		status2 := newRepoVulnStatusTemplate()
 		status2.UpdatedAt += 10
-		status2.Status = models.VulnStatusFixed
-		require.NoError(t, client.PutRepoVulnStatusBatch([]*models.RepoVulnStatus{status2}))
+		status2.Status = model.VulnStatusFixed
+		require.NoError(t, client.PutRepoVulnStatusBatch([]*model.RepoVulnStatus{status2}))
 
 		resp, err := client.GetRepoVulnStatusByRepo("1111111111.dkr.ecr.ap-northeast-1.amazonaws.com", "test-image", "good-tag")
 		require.NoError(t, err)
@@ -142,6 +142,7 @@ func TestScanReport(t *testing.T) {
 
 		// other repository with report1
 		report3 := newScanReporTemplate()
+		report3.ScannedAt += 2
 		report3.Repo = "moon"
 		require.NoError(t, client.PutScanReport(report3))
 
@@ -152,22 +153,23 @@ func TestScanReport(t *testing.T) {
 		})
 
 		t.Run("Lookup with report ID", func(t *testing.T) {
-			resp, err := client.GetBatchScanReportByID([]string{report1.ReportID, "dummyID"})
+			resp, err := client.GetScanReportByID(report1.ReportID)
 			require.NoError(t, err)
-			require.Equal(t, 1, len(resp)) // dummyID returns no report
-			assert.Equal(t, resp[0], report1)
+			assert.Equal(t, resp, report1)
 		})
 
-		t.Run("Not found with invalid report ID", func(t *testing.T) {
-			resp, err := client.GetBatchScanReportByID([]string{"?"})
-			require.NoError(t, err)
-			assert.Equal(t, 0, len(resp))
-		})
+		/*
+			t.Run("Not found with invalid report ID", func(t *testing.T) {
+				resp, err := client.GetBatchScanReportByID([]string{"?"})
+				require.NoError(t, err)
+				assert.Equal(t, 0, len(resp))
+			})
+		*/
 
 		t.Run("Lookup with repo", func(t *testing.T) {
 			resp, err := client.GetLatestScanReportsByRepo("1111111111.dkr.ecr.ap-northeast-1.amazonaws.com", "star", "main")
 			require.NoError(t, err)
-			require.NotNil(t, resp)
+			require.Equal(t, report2, resp)
 		})
 
 		t.Run("Not found with invalid repo", func(t *testing.T) {
@@ -184,24 +186,24 @@ func TestImageLayerDigests(t *testing.T) {
 		client := newTestTable(t)
 		defer deleteTestTable(t, client)
 
-		idx1 := &models.ImageLayerIndex{
-			Image: models.Image{
+		idx1 := &model.ImageLayerIndex{
+			Image: model.Image{
 				Registry: "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
 				Repo:     "blue",
 				Digest:   "abc123",
 			},
 			LayerDigest: "caffee",
 		}
-		idx2 := &models.ImageLayerIndex{
-			Image: models.Image{
+		idx2 := &model.ImageLayerIndex{
+			Image: model.Image{
 				Registry: "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
 				Repo:     "orange",
 				Digest:   "321bca",
 			},
 			LayerDigest: "beef00",
 		}
-		idx3 := &models.ImageLayerIndex{
-			Image: models.Image{
+		idx3 := &model.ImageLayerIndex{
+			Image: model.Image{
 				Registry: "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
 				Repo:     "five",
 				Digest:   "112233",

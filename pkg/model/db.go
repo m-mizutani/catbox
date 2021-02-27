@@ -1,4 +1,4 @@
-package models
+package model
 
 type DBBaseRecord struct {
 	PK string `dynamo:"pk,hash" json:"-"`

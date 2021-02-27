@@ -1,7 +1,7 @@
 package main
 
-import "github.com/m-mizutani/catbox/pkg/handler"
+import "github.com/m-mizutani/catbox/pkg/interfaces"
 
-func handlePeriodicEvent(args *handler.Arguments, event cloudWatchEvent) error {
+func handlePeriodicEvent(args *interfaces.Config, event cloudWatchEvent) error {
 	return nil
 }

@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/m-mizutani/catbox/pkg/handler"
-	"github.com/m-mizutani/catbox/pkg/models"
+	"github.com/m-mizutani/catbox/pkg/interfaces"
+	"github.com/m-mizutani/catbox/pkg/model"
 	"github.com/m-mizutani/catbox/pkg/service"
 	"github.com/m-mizutani/golambda"
 )
@@ -34,7 +34,7 @@ func parseRepositoryARN(arn string) (string, string, error) {
 	return fmt.Sprintf("%s.dkr.ecr.%s.amazonaws.com", arnParts[4], arnParts[3]), repoParts[1], nil
 }
 
-func handleECREvent(args *handler.Arguments, event cloudWatchEvent) error {
+func handleECREvent(config *interfaces.Config, event cloudWatchEvent) error {
 	logger.With("event", event).Info("handleECREvent")
 
 	if "PutImage" != event.Detail.EventName {
@@ -47,7 +47,7 @@ func handleECREvent(args *handler.Arguments, event cloudWatchEvent) error {
 		return golambda.WrapError(err, "Parsing eventTime of ECR event")
 	}
 
-	svc := service.New(args)
+	svc := service.New(config)
 
 	for _, rsc := range event.Detail.Resources {
 		registry, repo, err := parseRepositoryARN(rsc.Arn)
@@ -55,7 +55,7 @@ func handleECREvent(args *handler.Arguments, event cloudWatchEvent) error {
 			return err
 		}
 
-		target := models.Image{
+		target := model.Image{
 			Registry: registry,
 			Repo:     repo,
 			Tag:      event.Detail.ResponseElements.Image.ImageID.ImageTag,
@@ -63,14 +63,14 @@ func handleECREvent(args *handler.Arguments, event cloudWatchEvent) error {
 		}
 		basePrefix := fmt.Sprintf("snapshots/%s/%s/%s/%s_%06d/", target.Registry, target.Repo, target.Digest, ts.Format("20060102_150405"), ts.Nanosecond()/1000)
 
-		req := &models.ScanRequestMessage{
+		req := &model.ScanRequestMessage{
 			RequestID:   uuid.New().String(),
 			RequestedBy: "ecr.PushImage",
 			RequestedAt: ts,
 			Target:      target,
-			S3Region:    args.S3Region,
-			S3Bucket:    args.S3Bucket,
-			S3Prefix:    args.S3Prefix + basePrefix,
+			S3Region:    config.S3Region,
+			S3Bucket:    config.S3Bucket,
+			S3Prefix:    config.S3Prefix + basePrefix,
 		}
 
 		if err := svc.SendScanRequest(req); err != nil {

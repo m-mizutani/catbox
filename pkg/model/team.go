@@ -1,4 +1,4 @@
-package models
+package model
 
 type Team struct {
 	DBBaseRecord

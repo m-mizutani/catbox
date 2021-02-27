@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/m-mizutani/catbox/pkg/handler"
-	"github.com/m-mizutani/catbox/pkg/models"
+	"github.com/m-mizutani/catbox/pkg/interfaces"
+	"github.com/m-mizutani/catbox/pkg/model"
 	"github.com/m-mizutani/catbox/pkg/service"
 	"github.com/m-mizutani/golambda"
 )
@@ -11,7 +11,7 @@ var logger = golambda.Logger
 
 func main() {
 	golambda.Start(func(event golambda.Event) (interface{}, error) {
-		args, err := handler.NewArguments()
+		config, err := interfaces.NewConfig()
 		if err != nil {
 			return nil, golambda.WrapError(err).With("event", event)
 		}
@@ -22,12 +22,12 @@ func main() {
 		}
 
 		for _, record := range records {
-			var req models.ScanRequestMessage
+			var req model.ScanRequestMessage
 			if err := record.Bind(&req); err != nil {
 				return nil, err
 			}
 
-			if err := scanImage(args, &req); err != nil {
+			if err := scanImage(config, &req); err != nil {
 				return nil, err
 			}
 		}
@@ -36,8 +36,8 @@ func main() {
 	})
 }
 
-func scanImage(args *handler.Arguments, req *models.ScanRequestMessage) error {
-	svc := service.New(args)
+func scanImage(config *interfaces.Config, req *model.ScanRequestMessage) error {
+	svc := service.New(config)
 	trivyResults, err := svc.ScanImage(req.Target)
 	if err != nil {
 		return err

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/m-mizutani/catbox/pkg/handler"
+	"github.com/m-mizutani/catbox/pkg/interfaces"
 	"github.com/m-mizutani/golambda"
 )
 
@@ -9,7 +9,7 @@ var logger = golambda.Logger
 
 func main() {
 	golambda.Start(func(event golambda.Event) (interface{}, error) {
-		args, err := handler.NewArguments()
+		args, err := interfaces.NewConfig()
 		if err != nil {
 			return nil, golambda.WrapError(err).With("event", event)
 		}

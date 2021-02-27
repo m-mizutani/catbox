@@ -7,22 +7,29 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/google/uuid"
 	"github.com/guregu/dynamo"
-	"github.com/m-mizutani/catbox/pkg/models"
+	"github.com/m-mizutani/catbox/pkg/model"
 	"github.com/m-mizutani/golambda"
 )
 
 var logger = golambda.Logger
 
-type DBClient struct {
-	table dynamo.Table
-	local bool
+const (
+	dynamoGSIName = "secondary"
+)
+
+type DynamoClient struct {
+	tableName string
+	table     dynamo.Table
+	local     bool
 }
 
-type DBClientFactory func(region, tableName string) (*DBClient, error)
+// TableName is to identify name of table created for local test
+func (x *DynamoClient) TableName() string { return x.tableName }
 
-// NewDBClient creates DBClient
-func NewDBClient(region, tableName string) (*DBClient, error) {
+// NewDynamoClient creates DynamoClient
+func NewDynamoClient(region, tableName string) (*DynamoClient, error) {
 	ssn, err := session.NewSession(&aws.Config{
 		Region: aws.String(region),
 	})
@@ -31,14 +38,14 @@ func NewDBClient(region, tableName string) (*DBClient, error) {
 	}
 
 	table := dynamo.New(ssn).Table(tableName)
-	return &DBClient{
+	return &DynamoClient{
 		table: table,
 	}, nil
 }
 
-// NewDBClientLocal configures DBClient with local endpoint and create a table for test and return the client.
-func NewDBClientLocal(region, tableName string) (*DBClient, error) {
-	// Dummy credential
+// NewDynamoClientLocal configures DynamoClient with local endpoint and create a table for test and return the client.
+func NewDynamoClientLocal(region, tableName string) (*DynamoClient, error) {
+	// Set port number
 	port := 8000
 	if v, ok := os.LookupEnv("DYNAMO_LOCAL_PORT"); ok {
 		localPort, err := strconv.ParseUint(v, 10, 64)
@@ -51,6 +58,10 @@ func NewDBClientLocal(region, tableName string) (*DBClient, error) {
 		port = int(localPort)
 	}
 
+	// Add table name suffix to isolate from other test
+	tableName += "-" + uuid.New().String()
+
+	// Dummy credential
 	os.Setenv("AWS_ACCESS_KEY_ID", "x")
 	os.Setenv("AWS_SECRET_ACCESS_KEY", "x")
 	ssn, err := session.NewSession(&aws.Config{
@@ -63,19 +74,19 @@ func NewDBClientLocal(region, tableName string) (*DBClient, error) {
 	}
 
 	db := dynamo.New(ssn)
-	if err := db.CreateTable(tableName, models.DBBaseRecord{}).OnDemand(true).Run(); err != nil {
+	if err := db.CreateTable(tableName, model.DBBaseRecord{}).OnDemand(true).Run(); err != nil {
 		return nil, golambda.WrapError(err, "Creating local DynamoDB table")
 	}
 
 	table := dynamo.New(ssn).Table(tableName)
-	return &DBClient{
+	return &DynamoClient{
 		local: true,
 		table: table,
 	}, nil
 }
 
 // DestroyTable deletes table in local DynamoDB. It will panic if trying delete of remote DynamoDB table.
-func (x *DBClient) DestroyTable() error {
+func (x *DynamoClient) DestroyTable() error {
 	if !x.local {
 		panic("DO NOT call DestroyTable for remote DynamoDB table")
 	}
@@ -88,7 +99,7 @@ func (x *DBClient) DestroyTable() error {
 }
 
 // PutRepoVulnStatusBatch puts multiple RepoVulnStatus to DynamoDB per 25 items iteratively
-func (x *DBClient) PutRepoVulnStatusBatch(vulnStatuses []*models.RepoVulnStatus) error {
+func (x *DynamoClient) PutRepoVulnStatusBatch(vulnStatuses []*model.RepoVulnStatus) error {
 	const batchSize = 25
 	for i := 0; i < len(vulnStatuses); i += batchSize {
 		e := i + batchSize
@@ -115,9 +126,9 @@ func (x *DBClient) PutRepoVulnStatusBatch(vulnStatuses []*models.RepoVulnStatus)
 }
 
 // GetRepoVulnStatusByRepo retrieves all RepoVulnStatus bound to registry, repo and tag
-func (x *DBClient) GetRepoVulnStatusByRepo(registry, repo, tag string) ([]*models.RepoVulnStatus, error) {
-	var resp []*models.RepoVulnStatus
-	pk := models.RepoVulnStatusPK(registry, repo, tag)
+func (x *DynamoClient) GetRepoVulnStatusByRepo(registry, repo, tag string) ([]*model.RepoVulnStatus, error) {
+	var resp []*model.RepoVulnStatus
+	pk := model.RepoVulnStatusPK(registry, repo, tag)
 	if err := x.table.Get("pk", pk).All(&resp); err != nil {
 		return nil, golambda.WrapError(err, "GetRepoVulnStatusByRepo").With("registry", registry).With("repo", repo).With("tag", tag)
 	}
@@ -126,10 +137,10 @@ func (x *DBClient) GetRepoVulnStatusByRepo(registry, repo, tag string) ([]*model
 }
 
 // GetRepoVulnStatusByVulnID retrieves all RepoVulnStatus bound to a vulnID
-func (x *DBClient) GetRepoVulnStatusByVulnID(vulnID string) ([]*models.RepoVulnStatus, error) {
-	var resp []*models.RepoVulnStatus
-	pk2 := models.RepoVulnStatusPK2(vulnID)
-	if err := x.table.Get("pk2", pk2).Index("secondary").All(&resp); err != nil {
+func (x *DynamoClient) GetRepoVulnStatusByVulnID(vulnID string) ([]*model.RepoVulnStatus, error) {
+	var resp []*model.RepoVulnStatus
+	pk2 := model.RepoVulnStatusPK2(vulnID)
+	if err := x.table.Get("pk2", pk2).Index(dynamoGSIName).All(&resp); err != nil {
 		return nil, golambda.WrapError(err, "GetRepoVulnStatusByVulnID").With("vulnID", vulnID)
 	}
 
@@ -137,7 +148,7 @@ func (x *DBClient) GetRepoVulnStatusByVulnID(vulnID string) ([]*models.RepoVulnS
 }
 
 // PutScanReport puts ScanReport to DynamoDB
-func (x *DBClient) PutScanReport(report *models.ScanReport) error {
+func (x *DynamoClient) PutScanReport(report *model.ScanReport) error {
 	report.AssignKeys()
 	if err := x.table.Put(report).Run(); err != nil {
 		return golambda.WrapError(err, "PutScanReport").With("report", report)
@@ -145,20 +156,42 @@ func (x *DBClient) PutScanReport(report *models.ScanReport) error {
 	return nil
 }
 
-// GetBatchScanReportByID returns multiple reports by reportIDs.
-func (x *DBClient) GetBatchScanReportByID(reportIDs []string) ([]*models.ScanReport, error) {
-	return nil, nil
+// GetScanReportByID returns multiple reports by reportIDs.
+func (x *DynamoClient) GetScanReportByID(reportID string) (*model.ScanReport, error) {
+	var resp model.ScanReport
+	pk2 := model.ScanReportPK2()
+	sk2 := model.ScanReportSK2(reportID)
+	query := x.table.Get("pk2", pk2).Index(dynamoGSIName).Range("sk2", dynamo.Equal, sk2)
+
+	if err := query.One(&resp); err != nil {
+		if err == dynamo.ErrNotFound {
+			return nil, nil
+		}
+	}
+
+	return &resp, nil
 }
 
 // GetLatestScanReportsByRepo returns latest report of a repository. It returns nil if no report is available.
-func (x *DBClient) GetLatestScanReportsByRepo(registry, repo, tag string) (*models.ScanReport, error) {
-	return nil, nil
+func (x *DynamoClient) GetLatestScanReportsByRepo(registry, repo, tag string) (*model.ScanReport, error) {
+	var resp model.ScanReport
+	pk := model.ScanReportPK(registry, repo, tag)
+	query := x.table.Get("pk", pk).Order(dynamo.Descending).Limit(1)
+
+	if err := query.One(&resp); err != nil {
+		if err == dynamo.ErrNotFound {
+			return nil, nil
+		}
+		return nil, golambda.WrapError(err, "GetLatestScanReportsByRepo").With("query", query)
+	}
+
+	return &resp, nil
 }
 
-func (x *DBClient) PutImageLayerDigest(layerDigest *models.ImageLayerIndex) error {
+func (x *DynamoClient) PutImageLayerDigest(layerDigest *model.ImageLayerIndex) error {
 	return nil
 }
 
-func (x *DBClient) LookupImageLayerDigests(digests []string) ([]*models.ImageLayerIndex, error) {
+func (x *DynamoClient) LookupImageLayerDigests(digests []string) ([]*model.ImageLayerIndex, error) {
 	return nil, nil
 }
