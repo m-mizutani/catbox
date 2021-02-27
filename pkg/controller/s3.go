@@ -17,7 +17,7 @@ func (x *Controller) setupS3Client() error {
 	}
 
 	// catbox accesses to S3 bucket specified by S3Region.
-	s3Client, err := x.NewS3(x.S3Region)
+	s3Client, err := x.adaptors.NewS3(x.S3Region)
 	if err != nil {
 		return golambda.WrapError(err, "Creating S3 client").With("region", x.S3Region)
 	}
@@ -43,11 +43,11 @@ func (x *Controller) downloadS3Object(suffixKey, dstPath string) error {
 	}
 	defer output.Body.Close()
 
-	if err := x.MkdirAll(filepath.Dir(dstPath), 0777); err != nil {
+	if err := x.adaptors.MkdirAll(filepath.Dir(dstPath), 0777); err != nil {
 		return golambda.WrapError(err, "Failed to create %s directory", filepath.Dir(dstPath))
 	}
 
-	file, err := x.Create(dstPath)
+	file, err := x.adaptors.Create(dstPath)
 	if err != nil {
 		return golambda.WrapError(err, "cannot save file")
 	}
@@ -64,7 +64,7 @@ func (x *Controller) uploadS3Object(suffixKey, srcPath string) error {
 		return err
 	}
 
-	data, err := x.ReadFile(srcPath)
+	data, err := x.adaptors.ReadFile(srcPath)
 	if err != nil {
 		return golambda.WrapError(err, "Read file to upload S3 object").With("srcPath", srcPath)
 	}

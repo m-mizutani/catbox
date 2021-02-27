@@ -16,7 +16,7 @@ func (x *Controller) setupSQSClient() error {
 	}
 
 	// catbox sends to only SQS queue in same region with Lambda.
-	sqsClient, err := x.NewSQS(x.AwsRegion)
+	sqsClient, err := x.adaptors.NewSQS(x.AwsRegion)
 	if err != nil {
 		return golambda.WrapError(err, "Failed to create SQS client").With("region", x.AwsRegion)
 	}

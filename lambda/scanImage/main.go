@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/m-mizutani/catbox/pkg/controller"
 	"github.com/m-mizutani/catbox/pkg/model"
+	"github.com/m-mizutani/catbox/pkg/usecase"
 	"github.com/m-mizutani/golambda"
 )
 
@@ -23,21 +24,11 @@ func main() {
 				return nil, err
 			}
 
-			if err := scanImage(ctrl, &req); err != nil {
+			if err := usecase.TrivyScanImage(ctrl, &req); err != nil {
 				return nil, err
 			}
 		}
 
 		return nil, nil
 	})
-}
-
-func scanImage(ctrl *controller.Controller, req *model.ScanRequestMessage) error {
-	trivyResults, err := ctrl.ScanImage(req.Target)
-	if err != nil {
-		return err
-	}
-
-	logger.With("report", trivyResults).With("req", req).Info("Scanned")
-	return nil
 }

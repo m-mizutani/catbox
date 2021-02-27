@@ -2,12 +2,12 @@ package model
 
 // Image is docker image identifier
 type Image struct {
-	Registry     string   `dynamo:"registry" json:"registry"`
-	Repo         string   `dynamo:"repo" json:"repo"`
-	Tag          string   `dynamo:"tag" json:"tag"`
-	Digest       string   `dynamo:"digest,omitempty" json:"digest,omitempty"`
-	LayerDigests []string `dynamo:"layer_digests,omitempty" json:"layer_digests,omitempty"`
-	Env          []string `dynamo:"env,omitempty" json:"env,omitempty"`
+	Registry     string
+	Repo         string
+	Tag          string
+	Digest       string   `json:",omitempty"`
+	LayerDigests []string `json:",omitempty"`
+	Env          []string `json:",omitempty"`
 }
 
 // RegistryRepoTag returns "{registry}/{repo}:{tag}"
@@ -21,16 +21,6 @@ func (x *Image) RegistryRepoDigest() string {
 }
 
 type ImageLayerIndex struct {
-	DBBaseRecord
 	Image
-	LayerDigest string `dynamo:"layer_digest" json:"layer_digest"`
-}
-
-func ImageLayerIndexPK(layerDigest string) string {
-	return "layer_digest:" + layerDigest
-}
-
-func (x *ImageLayerIndex) AssignKeys() {
-	x.PK = ImageLayerIndexPK(x.LayerDigest)
-	x.SK = x.Image.RegistryRepoDigest()
+	LayerDigest string
 }

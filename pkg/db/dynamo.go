@@ -1,6 +1,7 @@
 package db
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -9,7 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/google/uuid"
 	"github.com/guregu/dynamo"
-	"github.com/m-mizutani/catbox/pkg/model"
 	"github.com/m-mizutani/golambda"
 )
 
@@ -18,6 +18,16 @@ var logger = golambda.Logger
 const (
 	dynamoGSIName = "secondary"
 )
+
+type dynamoRecord struct {
+	PK string `dynamo:"pk,hash"`
+	SK string `dynamo:"sk,range"`
+
+	PK2 string `dynamo:"pk2,omitempty" index:"secondary,hash"`
+	SK2 string `dynamo:"sk2,omitempty" index:"secondary,range"`
+
+	Docs interface{} `dynamo:"docs"`
+}
 
 type DynamoClient struct {
 	tableName string
@@ -74,7 +84,7 @@ func NewDynamoClientLocal(region, tableName string) (*DynamoClient, error) {
 	}
 
 	db := dynamo.New(ssn)
-	if err := db.CreateTable(tableName, model.DBBaseRecord{}).OnDemand(true).Run(); err != nil {
+	if err := db.CreateTable(tableName, dynamoRecord{}).OnDemand(true).Run(); err != nil {
 		return nil, golambda.WrapError(err, "Creating local DynamoDB table")
 	}
 
@@ -96,135 +106,15 @@ func (x *DynamoClient) Close() error {
 	return nil
 }
 
-// PutRepoVulnStatusBatch puts multiple RepoVulnStatus to DynamoDB per 25 items iteratively
-func (x *DynamoClient) PutRepoVulnStatusBatch(vulnStatuses []*model.RepoVulnStatus) error {
-	const batchSize = 25
-	for i := 0; i < len(vulnStatuses); i += batchSize {
-		e := i + batchSize
-		if len(vulnStatuses) < e {
-			e = len(vulnStatuses)
-		}
-		batchSize := e - i
-		items := make([]interface{}, batchSize)
+func (x *dynamoRecord) Unmarshal(v interface{}) error {
+	raw, err := json.Marshal(x.Docs)
+	if err != nil {
+		return golambda.WrapError(err, "json.Marshal").With("x", x)
+	}
 
-		// Assign hash and range keys
-		for p := 0; p < batchSize; p++ {
-			vulnStatuses[i+p].AssignKeys()
-			items[p] = vulnStatuses[i+p]
-		}
-
-		wrote, err := x.table.Batch().Write().Put(items...).Run()
-		if err != nil {
-			return golambda.WrapError(err, "PutRepoVulnStatusBatch").With("items", items)
-		}
-		logger.With("wrote", wrote).Debug("Batch put RepoVulnStatus")
+	if err := json.Unmarshal(raw, v); err != nil {
+		return golambda.WrapError(err, "json.Unmarshal").With("x", x).With("raw", string(raw))
 	}
 
 	return nil
 }
-
-// GetRepoVulnStatusByRepo retrieves all RepoVulnStatus bound to registry, repo and tag
-func (x *DynamoClient) GetRepoVulnStatusByRepo(registry, repo, tag string) ([]*model.RepoVulnStatus, error) {
-	var resp []*model.RepoVulnStatus
-	pk := model.RepoVulnStatusPK(registry, repo, tag)
-	if err := x.table.Get("pk", pk).All(&resp); err != nil {
-		return nil, golambda.WrapError(err, "GetRepoVulnStatusByRepo").With("registry", registry).With("repo", repo).With("tag", tag)
-	}
-
-	return resp, nil
-}
-
-// GetRepoVulnStatusByVulnID retrieves all RepoVulnStatus bound to a vulnID
-func (x *DynamoClient) GetRepoVulnStatusByVulnID(vulnID string) ([]*model.RepoVulnStatus, error) {
-	var resp []*model.RepoVulnStatus
-	pk2 := model.RepoVulnStatusPK2(vulnID)
-	if err := x.table.Get("pk2", pk2).Index(dynamoGSIName).All(&resp); err != nil {
-		return nil, golambda.WrapError(err, "GetRepoVulnStatusByVulnID").With("vulnID", vulnID)
-	}
-
-	return resp, nil
-}
-
-// PutScanReport puts ScanReport to DynamoDB
-func (x *DynamoClient) PutScanReport(report *model.ScanReport) error {
-	report.AssignKeys()
-	if err := x.table.Put(report).Run(); err != nil {
-		return golambda.WrapError(err, "PutScanReport").With("report", report)
-	}
-	return nil
-}
-
-// GetScanReportByID returns multiple reports by reportIDs.
-func (x *DynamoClient) GetScanReportByID(reportID string) (*model.ScanReport, error) {
-	var resp model.ScanReport
-	pk2 := model.ScanReportPK2()
-	sk2 := model.ScanReportSK2(reportID)
-	query := x.table.Get("pk2", pk2).Index(dynamoGSIName).Range("sk2", dynamo.Equal, sk2)
-
-	if err := query.One(&resp); err != nil {
-		if err == dynamo.ErrNotFound {
-			return nil, nil
-		}
-	}
-
-	return &resp, nil
-}
-
-// GetLatestScanReportsByRepo returns latest report of a repository. It returns nil if no report is available.
-func (x *DynamoClient) GetLatestScanReportsByRepo(registry, repo, tag string) (*model.ScanReport, error) {
-	var resp model.ScanReport
-	pk := model.ScanReportPK(registry, repo, tag)
-	query := x.table.Get("pk", pk).Order(dynamo.Descending).Limit(1)
-
-	if err := query.One(&resp); err != nil {
-		if err == dynamo.ErrNotFound {
-			return nil, nil
-		}
-		return nil, golambda.WrapError(err, "GetLatestScanReportsByRepo").With("query", query)
-	}
-
-	return &resp, nil
-}
-
-// PutImageLayerDigest inserts layerDigest
-func (x *DynamoClient) PutImageLayerDigest(layerDigest *model.ImageLayerIndex) error {
-	layerDigest.AssignKeys()
-
-	if err := x.table.Put(layerDigest).Run(); err != nil {
-		return golambda.WrapError(err, "PutImageLayerDigest").With("layerDigest", layerDigest)
-	}
-	return nil
-}
-
-func (x *DynamoClient) LookupImageLayerDigest(digest string) ([]*model.ImageLayerIndex, error) {
-	pk := model.ImageLayerIndexPK(digest)
-
-	var resp []*model.ImageLayerIndex
-	if err := x.table.Get("pk", pk).All(&resp); err != nil {
-		return nil, golambda.WrapError(err, "LookupImageLayerDigests").With("digest", digest)
-	}
-	return resp, nil
-}
-
-/*
-type keyed struct {
-	pk string
-	sk string
-}
-
-func (x *keyed) HashKey() interface{}  { return x.pk }
-func (x *keyed) RangeKey() interface{} { return "-" }
-
-func (x *DynamoClient) LookupImageLayerDigests(digests []string) ([]*model.ImageLayerIndex, error) {
-	var keys []dynamo.Keyed
-	for _, digest := range digests {
-		keys = append(keys, &keyed{pk: digest})
-	}
-
-	var resp []*model.ImageLayerIndex
-	if err := x.table.Batch("pk").Get(keys...).All(&resp); err != nil {
-		return nil, golambda.WrapError(err, "LookupImageLayerDigests").With("digests", digests)
-	}
-	return resp, nil
-}
-*/

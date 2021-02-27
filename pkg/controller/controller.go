@@ -14,16 +14,17 @@ var logger = golambda.Logger
 
 type Controller struct {
 	Config
-	Adaptors
+	adaptors Adaptors
 
 	s3Client  interfaces.S3Client
 	sqsClient interfaces.SQSClient
 	ecrClient interfaces.ECRClient
+	dbClient  interfaces.DBClient
 }
 
 func New() *Controller {
 	ctrl := &Controller{
-		Adaptors: defaultAdaptors,
+		adaptors: defaultAdaptors,
 	}
 
 	if err := ctrl.Config.UnmarshalEnvVars(); err != nil {
@@ -31,6 +32,11 @@ func New() *Controller {
 	}
 
 	return ctrl
+}
+
+// InjectAdaptors replaces adaptors for unit test by copying (not referencing)
+func (x *Controller) InjectAdaptors(adaptors Adaptors) {
+	x.adaptors = adaptors
 }
 
 // Config is structure to unmarshal environment variables for lambda

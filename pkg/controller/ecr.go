@@ -136,7 +136,7 @@ func (x *Controller) setupECRClient(region string) error {
 		return nil
 	}
 
-	ecrClient, err := x.NewECR(region)
+	ecrClient, err := x.adaptors.NewECR(region)
 	if err != nil {
 		return golambda.WrapError(err, "Creating S3 client").With("region", x.S3Region)
 	}
@@ -187,7 +187,7 @@ func (x *Controller) GetImageManifest(target *model.Image, authToken string) (*i
 	req.Header.Add("Authorization", "Basic "+authToken)
 	req.Header.Add("Accept", "*/*")
 
-	resp, err := x.HTTP.Do(req)
+	resp, err := x.adaptors.HTTP.Do(req)
 	if err != nil {
 		return nil, golambda.WrapError(err, "Fail to send http request to registry").With("target", target)
 	} else if resp.StatusCode != http.StatusOK {
@@ -240,7 +240,7 @@ func (x *Controller) getImageEnv(manifest *imageManifestResult, target *model.Im
 	req.Header.Add("Authorization", "Basic "+authToken)
 	req.Header.Add("Accept", manifest.MediaType)
 
-	resp, err := x.HTTP.Do(req)
+	resp, err := x.adaptors.HTTP.Do(req)
 	if err != nil {
 		return nil, golambda.WrapError(err, "Fail to send http request to get blobs").With("url", url).With("target", target)
 	} else if resp.StatusCode != 200 {

@@ -12,13 +12,6 @@ import (
 	"github.com/m-mizutani/golambda"
 )
 
-// S3Loc describes location of S3 like directory
-type S3Loc struct {
-	Region string
-	Bucket string
-	Prefix string
-}
-
 type dbMetadata struct {
 	MetadataVersion int `json:"Version"`
 	// MetadataType is actually db.Type type
@@ -28,10 +21,10 @@ type dbMetadata struct {
 }
 
 const (
-	trivyCacheDBKeyPart        = "cache/trivy/" + trivyCacheDBPathPart
-	trivyCacheMetadataKeyPart  = "cache/trivy/" + trivyCacheMetadataPathPart
 	trivyCacheDBPathPart       = "db/trivy.db"
 	trivyCacheMetadataPathPart = "db/metadata.json"
+	trivyCacheDBKeyPart        = "cache/trivy/" + trivyCacheDBPathPart
+	trivyCacheMetadataKeyPart  = "cache/trivy/" + trivyCacheMetadataPathPart
 )
 
 func trivyCacheDBKey(prefix string) string {
@@ -42,14 +35,23 @@ func trivyCacheMetadataKey(prefix string) string {
 	return prefix + trivyCacheMetadataKeyPart
 }
 
-func (x *Controller) downloadTrivyDB(localDir string) error {
-	dbPath := filepath.Join(localDir, trivyCacheDBPathPart)
+func trivyCacheDBPath(cacheDir string) string {
+	return filepath.Join(cacheDir, trivyCacheDBPathPart)
+}
+
+func trivyCacheMetadataPath(cacheDir string) string {
+	return filepath.Join(cacheDir, trivyCacheMetadataPathPart)
+}
+
+// DownloadTrivyDB gets trivy DB and metadata.json and saves them to cacheDir
+func (x *Controller) DownloadTrivyDB(cacheDir string) error {
+	dbPath := trivyCacheDBPath(cacheDir)
 
 	if err := x.downloadS3Object(trivyCacheDBKeyPart, dbPath); err != nil {
 		return golambda.WrapError(err).With("dbPath", dbPath)
 	}
 
-	metaPath := filepath.Join(localDir, trivyCacheMetadataPathPart)
+	metaPath := trivyCacheMetadataPath(cacheDir)
 	if err := x.downloadS3Object(trivyCacheMetadataKeyPart, metaPath); err != nil {
 		return golambda.WrapError(err).With("metaPath", metaPath)
 	}
@@ -57,30 +59,34 @@ func (x *Controller) downloadTrivyDB(localDir string) error {
 	return nil
 }
 
-func (x *Controller) uploadTrivyReport(report *model.TrivyResults, req *model.ScanRequestMessage) error {
+// UploadTrivyReport saves report to dst as S3 object
+func (x *Controller) UploadTrivyReport(report model.TrivyResults, dst *model.S3Path) error {
 	return nil
 }
 
-func (x *Controller) DownloadTrivyReport(report *model.TrivyResults) {}
+// DownloadTrivyReport gets report from src S3 object
+func (x *Controller) DownloadTrivyReport(src *model.S3Path) (model.TrivyResults, error) {
+	return nil, nil
+}
 
-// ScanImage setup DB and metadata, then invokes trivy command by exec.Command
-func (x *Controller) ScanImage(img model.Image) ([]report.Result, error) {
-	localDir := "/tmp"
+// HasTrivyDB checks if both of DB and metadata.json exist
+func (x *Controller) HasTrivyDB(cacheDir string) bool {
 
-	if err := x.downloadTrivyDB(localDir); err != nil {
-		return nil, err
-	}
+	return false
+}
 
+// InvokeTrivyScan setup DB invokes trivy command by exec.Command
+func (x *Controller) InvokeTrivyScan(img model.Image, cacheDir string) ([]report.Result, error) {
 	imagePath := img.RegistryRepoTag()
 
-	tmpName, err := x.TempFile("", "output*.json")
+	tmpName, err := x.adaptors.TempFile("", "output*.json")
 	if err != nil {
 		return nil, golambda.WrapError(err, "Fail to create temp file for trivy output")
 	}
 
 	trivyOptions := []string{
 		"-q",
-		"--cache-dir", localDir,
+		"--cache-dir", cacheDir,
 		"image",
 		"--format", "json",
 		"--skip-update",
@@ -90,7 +96,7 @@ func (x *Controller) ScanImage(img model.Image) ([]report.Result, error) {
 	}
 
 	logger.
-		With("localDir", localDir).
+		With("cacheDir", cacheDir).
 		With("img", img).
 		With("options", trivyOptions).
 		Info("Invoke trivy")
@@ -100,7 +106,7 @@ func (x *Controller) ScanImage(img model.Image) ([]report.Result, error) {
 		"Invalid yarn.lock format:", // Ignore old yarn schema
 	}
 
-	out, err := x.Exec("./trivy", trivyOptions...)
+	out, err := x.adaptors.Exec("./trivy", trivyOptions...)
 	logger.With("out", string(out)).Debug("Done trivy command")
 
 	if err != nil {
@@ -113,7 +119,7 @@ func (x *Controller) ScanImage(img model.Image) ([]report.Result, error) {
 		return nil, golambda.WrapError(err, "Fail to invoke trivy command")
 	}
 
-	trivyOutput, err := x.ReadFile(tmpName)
+	trivyOutput, err := x.adaptors.ReadFile(tmpName)
 	if err != nil {
 		return nil, golambda.WrapError(err, "Fail to read trivy output temp file").With("tmpName", tmpName)
 	}

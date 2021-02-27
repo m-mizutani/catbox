@@ -34,10 +34,12 @@ func deleteTestTable(t *testing.T, client *db.DynamoClient) {
 func newRepoVulnStatusTemplate() *model.RepoVulnStatus {
 	return &model.RepoVulnStatus{
 		Image: model.Image{
-			Registry: "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
-			Repo:     "test-image",
-			Tag:      "good-tag",
-			Digest:   "12345678",
+			Registry:     "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
+			Repo:         "test-image",
+			Tag:          "good-tag",
+			Digest:       "12345678",
+			LayerDigests: make([]string, 0),
+			Env:          make([]string, 0),
 		},
 
 		VulnID:    "CVE-2001-1234",
@@ -56,10 +58,12 @@ func newRepoVulnStatusTemplate() *model.RepoVulnStatus {
 func newScanReporTemplate() *model.ScanReport {
 	return &model.ScanReport{
 		Image: model.Image{
-			Registry: "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
-			Repo:     "star",
-			Tag:      "main",
-			Digest:   "12345678",
+			Registry:     "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
+			Repo:         "star",
+			Tag:          "main",
+			Digest:       "12345678",
+			LayerDigests: make([]string, 0),
+			Env:          make([]string, 0),
 		},
 		ScanType:    model.ScanTypeTrivy,
 		RequestedAt: 123456,
@@ -185,25 +189,31 @@ func TestImageLayerDigests(t *testing.T) {
 
 		idx1 := &model.ImageLayerIndex{
 			Image: model.Image{
-				Registry: "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
-				Repo:     "blue",
-				Digest:   "abc123",
+				Registry:     "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
+				Repo:         "blue",
+				Digest:       "abc123",
+				LayerDigests: make([]string, 0),
+				Env:          make([]string, 0),
 			},
 			LayerDigest: "caffee",
 		}
 		idx2 := &model.ImageLayerIndex{
 			Image: model.Image{
-				Registry: "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
-				Repo:     "orange",
-				Digest:   "321bca",
+				Registry:     "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
+				Repo:         "orange",
+				Digest:       "321bca",
+				LayerDigests: make([]string, 0),
+				Env:          make([]string, 0),
 			},
 			LayerDigest: "beef00",
 		}
 		idx3 := &model.ImageLayerIndex{
 			Image: model.Image{
-				Registry: "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
-				Repo:     "five",
-				Digest:   "112233",
+				Registry:     "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
+				Repo:         "five",
+				Digest:       "112233",
+				LayerDigests: make([]string, 0),
+				Env:          make([]string, 0),
 			},
 			LayerDigest: "xxxxxx",
 		}
