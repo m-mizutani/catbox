@@ -23,6 +23,7 @@ func (x *DynamoClient) PutImageLayerDigest(index *model.ImageLayerIndex) error {
 	return nil
 }
 
+// LookupImageLayerDigest returns image that has specified layer digest. It returns nil if no index is found
 func (x *DynamoClient) LookupImageLayerDigest(digest string) ([]*model.ImageLayerIndex, error) {
 	pk := imageLayerIndexPK(digest)
 	var records []dynamoRecord

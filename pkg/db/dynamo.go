@@ -29,6 +29,7 @@ type dynamoRecord struct {
 	Docs interface{} `dynamo:"docs"`
 }
 
+// DynamoClient is implementation of interfaces.DBClient to use Amazon DynamoDB
 type DynamoClient struct {
 	tableName string
 	table     dynamo.Table
@@ -106,6 +107,7 @@ func (x *DynamoClient) Close() error {
 	return nil
 }
 
+// Unmarshal copy record values to v via encoding and decoding as JSON.
 func (x *dynamoRecord) Unmarshal(v interface{}) error {
 	raw, err := json.Marshal(x.Docs)
 	if err != nil {
