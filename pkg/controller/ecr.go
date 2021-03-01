@@ -130,33 +130,19 @@ func extractAccountFromRegistry(registry string) (string, error) {
 	return matched[1], nil
 }
 
-// Hint: Not thread safe
-func (x *Controller) setupECRClient(region string) error {
-	if x.ecrClient != nil {
-		return nil
-	}
-
-	ecrClient, err := x.adaptors.NewECR(region)
-	if err != nil {
-		return golambda.WrapError(err, "Creating S3 client").With("region", x.S3Region)
-	}
-
-	x.ecrClient = ecrClient
-	return nil
-}
-
 // GetRegistryAPIToken gets registry access token via ecr.GetAuthorizationToken.
 func (x *Controller) GetRegistryAPIToken(registry string) (*string, error) {
 	ecrRegion, err := extractRegionFromRegistry(registry)
 	if err != nil {
 		return nil, err
 	}
-	if err := x.setupECRClient(ecrRegion); err != nil {
+	client, err := x.adaptors.NewECR(ecrRegion)
+	if err != nil {
 		return nil, err
 	}
 
 	input := &ecr.GetAuthorizationTokenInput{}
-	output, err := x.ecrClient.GetAuthorizationToken(input)
+	output, err := client.GetAuthorizationToken(input)
 	if err != nil {
 		return nil, golambda.WrapError(err, "Fail to get auth token of registry to fetch image manifest")
 	}

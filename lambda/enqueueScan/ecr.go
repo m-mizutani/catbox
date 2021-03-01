@@ -65,9 +65,7 @@ func handleECREvent(ctrl *controller.Controller, event cloudWatchEvent) error {
 			RequestedBy: "ecr.PushImage",
 			RequestedAt: ts,
 			Target:      target,
-			S3Region:    ctrl.S3Region,
-			S3Bucket:    ctrl.S3Bucket,
-			S3Prefix:    ctrl.S3Prefix + basePrefix,
+			OutS3Prefix: basePrefix,
 		}
 
 		if err := ctrl.SendScanRequest(req); err != nil {

@@ -24,9 +24,11 @@ func newScanReporTemplate() *model.ScanReport {
 		InvokedAt:   234567,
 		ScannedAt:   234569,
 
-		S3Region: "us-east-0",
-		S3Bucket: "example-bucket",
-		S3Key:    "hoge/moge.json.gz",
+		OutputTo: model.S3Path{
+			Region: "us-east-0",
+			Bucket: "example-bucket",
+			Key:    "hoge/moge.json.gz",
+		},
 	}
 }
 

@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"bytes"
+	"compress/gzip"
 	"path/filepath"
 	"strings"
 	"time"
@@ -8,6 +10,7 @@ import (
 	"encoding/json"
 
 	"github.com/aquasecurity/trivy/pkg/report"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/m-mizutani/catbox/pkg/model"
 	"github.com/m-mizutani/golambda"
 )
@@ -47,12 +50,12 @@ func trivyCacheMetadataPath(cacheDir string) string {
 func (x *Controller) DownloadTrivyDB(cacheDir string) error {
 	dbPath := trivyCacheDBPath(cacheDir)
 
-	if err := x.downloadS3Object(trivyCacheDBKeyPart, dbPath); err != nil {
+	if err := x.downloadS3ToFile(trivyCacheDBKeyPart, dbPath); err != nil {
 		return golambda.WrapError(err).With("dbPath", dbPath)
 	}
 
 	metaPath := trivyCacheMetadataPath(cacheDir)
-	if err := x.downloadS3Object(trivyCacheMetadataKeyPart, metaPath); err != nil {
+	if err := x.downloadS3ToFile(trivyCacheMetadataKeyPart, metaPath); err != nil {
 		return golambda.WrapError(err).With("metaPath", metaPath)
 	}
 
@@ -60,8 +63,27 @@ func (x *Controller) DownloadTrivyDB(cacheDir string) error {
 }
 
 // UploadTrivyReport saves report to dst as S3 object
-func (x *Controller) UploadTrivyReport(report model.TrivyResults, dst *model.S3Path) error {
-	return nil
+func (x *Controller) UploadTrivyReport(report model.TrivyResults, suffixKey string) (*model.S3Path, error) {
+	raw, err := json.Marshal(report)
+	if err != nil {
+		return nil, golambda.WrapError(err, "json.Marshal trivy report").With("report", report)
+	}
+
+	buf := &bytes.Buffer{}
+	wr := gzip.NewWriter(buf)
+	if _, err := wr.Write(raw); err != nil {
+		return nil, golambda.WrapError(err, "gzip.Write trivy report").With("raw", string(raw))
+	}
+	if err := wr.Close(); err != nil {
+		return nil, golambda.WrapError(err, "gzip.Close trivy report")
+	}
+
+	s3Path, err := x.uploadS3Data(suffixKey, bytes.NewReader(buf.Bytes()), aws.String("gzip"))
+	if err != nil {
+		return nil, golambda.WrapError(err, "s3.PutObject results of trivy").With("suffixKey", suffixKey)
+	}
+
+	return s3Path, nil
 }
 
 // DownloadTrivyReport gets report from src S3 object

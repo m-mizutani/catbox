@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/google/uuid"
 	"github.com/guregu/dynamo"
+	"github.com/m-mizutani/catbox/pkg/interfaces"
 	"github.com/m-mizutani/golambda"
 )
 
@@ -40,7 +41,7 @@ type DynamoClient struct {
 func (x *DynamoClient) TableName() string { return x.tableName }
 
 // NewDynamoClient creates DynamoClient
-func NewDynamoClient(region, tableName string) (*DynamoClient, error) {
+func NewDynamoClient(region, tableName string) (interfaces.DBClient, error) {
 	ssn, err := session.NewSession(&aws.Config{
 		Region: aws.String(region),
 	})
@@ -55,7 +56,7 @@ func NewDynamoClient(region, tableName string) (*DynamoClient, error) {
 }
 
 // NewDynamoClientLocal configures DynamoClient with local endpoint and create a table for test and return the client.
-func NewDynamoClientLocal(region, tableName string) (*DynamoClient, error) {
+func NewDynamoClientLocal(region, tableName string) (interfaces.DBClient, error) {
 	// Set port number
 	port := 8000
 	if v, ok := os.LookupEnv("DYNAMO_LOCAL_PORT"); ok {

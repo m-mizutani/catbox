@@ -7,28 +7,14 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/m-mizutani/catbox/pkg/model"
 	"github.com/m-mizutani/golambda"
 )
 
-// Hint: Not thread safe
-func (x *Controller) setupS3Client() error {
-	if x.s3Client != nil {
-		return nil
-	}
-
-	// catbox accesses to S3 bucket specified by S3Region.
-	s3Client, err := x.adaptors.NewS3(x.S3Region)
-	if err != nil {
-		return golambda.WrapError(err, "Creating S3 client").With("region", x.S3Region)
-	}
-
-	x.s3Client = s3Client
-	return nil
-}
-
 // downloadS3Object downloads object s3://{x.S3Bucket}/{x.S3Prefix}{suffixKey} to file:///{dstPath}
-func (x *Controller) downloadS3Object(suffixKey, dstPath string) error {
-	if err := x.setupS3Client(); err != nil {
+func (x *Controller) downloadS3ToFile(suffixKey, dstPath string) error {
+	client, err := x.adaptors.NewS3(x.S3Region)
+	if err != nil {
 		return err
 	}
 
@@ -37,7 +23,7 @@ func (x *Controller) downloadS3Object(suffixKey, dstPath string) error {
 		Key:    aws.String(x.S3Prefix + suffixKey),
 	}
 
-	output, err := x.s3Client.GetObject(input)
+	output, err := client.GetObject(input)
 	if err != nil {
 		return golambda.WrapError(err, "Fail to download DB").With("input", input)
 	}
@@ -59,25 +45,38 @@ func (x *Controller) downloadS3Object(suffixKey, dstPath string) error {
 	return nil
 }
 
-func (x *Controller) uploadS3Object(suffixKey, srcPath string) error {
-	if err := x.setupS3Client(); err != nil {
-		return err
-	}
-
+func (x *Controller) uploadFileToS3(suffixKey, srcPath string) error {
 	data, err := x.adaptors.ReadFile(srcPath)
 	if err != nil {
 		return golambda.WrapError(err, "Read file to upload S3 object").With("srcPath", srcPath)
 	}
 
-	input := &s3.PutObjectInput{
-		Bucket: aws.String(x.S3Bucket),
-		Key:    aws.String(x.S3Prefix + suffixKey),
-		Body:   bytes.NewReader(data),
+	if _, err := x.uploadS3Data(suffixKey, bytes.NewReader(data), nil); err != nil {
+		return err
 	}
-
-	if _, err := x.s3Client.PutObject(input); err != nil {
-		return golambda.WrapError(err, "PutObject").With("input", input)
-	}
-
 	return nil
+}
+
+func (x Controller) uploadS3Data(suffixKey string, reader io.ReadSeeker, encoding *string) (*model.S3Path, error) {
+	client, err := x.adaptors.NewS3(x.S3Region)
+	if err != nil {
+		return nil, err
+	}
+
+	s3Key := x.S3Prefix + suffixKey
+	input := &s3.PutObjectInput{
+		Bucket:          aws.String(x.S3Bucket),
+		Key:             aws.String(s3Key),
+		Body:            reader,
+		ContentEncoding: encoding,
+	}
+
+	if _, err := client.PutObject(input); err != nil {
+		return nil, golambda.WrapError(err, "PutObject").With("input", input)
+	}
+	return &model.S3Path{
+		Region: x.S3Region,
+		Bucket: x.S3Bucket,
+		Key:    s3Key,
+	}, nil
 }

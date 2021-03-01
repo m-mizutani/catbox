@@ -16,10 +16,7 @@ type Controller struct {
 	Config
 	adaptors Adaptors
 
-	s3Client  interfaces.S3Client
-	sqsClient interfaces.SQSClient
-	ecrClient interfaces.ECRClient
-	dbClient  interfaces.DBClient
+	dbClient interfaces.DBClient
 }
 
 func New() *Controller {

@@ -1,0 +1,157 @@
+[
+  {
+    "Target": "111111111111.dkr.ecr.ap-northeast-1.amazonaws.com/strix:latest (ubuntu 18.04)",
+    "Type": "ubuntu",
+    "Vulnerabilities": [
+      {
+        "VulnerabilityID": "CVE-2020-27350",
+        "PkgName": "apt",
+        "InstalledVersion": "1.6.12",
+        "FixedVersion": "1.6.12ubuntu0.2",
+        "Layer": {
+          "DiffID": "sha256:c8be1b8f4d60d99c281fc2db75e0f56df42a83ad2f0b091621ce19357e19d853"
+        },
+        "SeveritySource": "ubuntu",
+        "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2020-27350",
+        "Description": "APT had several integer overflows and underflows while parsing .deb packages, aka GHSL-2020-168 GHSL-2020-169, in files apt-pkg/contrib/extracttar.cc, apt-pkg/deb/debfile.cc, and apt-pkg/contrib/arfile.cc. This issue affects: apt 1.2.32ubuntu0 versions prior to 1.2.32ubuntu0.2; 1.6.12ubuntu0 versions prior to 1.6.12ubuntu0.2; 2.0.2ubuntu0 versions prior to 2.0.2ubuntu0.2; 2.1.10ubuntu0 versions prior to 2.1.10ubuntu0.1;",
+        "Severity": "MEDIUM",
+        "CweIDs": [
+          "CWE-190"
+        ],
+        "CVSS": {
+          "nvd": {
+            "V2Vector": "AV:L/AC:L/Au:N/C:P/I:P/A:P",
+            "V3Vector": "CVSS:3.1/AV:L/AC:L/PR:H/UI:N/S:C/C:L/I:L/A:L",
+            "V2Score": 4.6,
+            "V3Score": 5.7
+          }
+        },
+        "References": [
+          "https://bugs.launchpad.net/bugs/1899193",
+          "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-27350",
+          "https://security.netapp.com/advisory/ntap-20210108-0005/",
+          "https://usn.ubuntu.com/usn/usn-4667-1",
+          "https://usn.ubuntu.com/usn/usn-4667-2",
+          "https://www.debian.org/security/2020/dsa-4808"
+        ],
+        "PublishedDate": "2020-12-10T04:15:00Z",
+        "LastModifiedDate": "2021-01-08T12:15:00Z"
+      },
+      {
+        "VulnerabilityID": "CVE-2017-15131",
+        "PkgName": "xdg-user-dirs",
+        "InstalledVersion": "0.17-1ubuntu1",
+        "Layer": {
+          "DiffID": "sha256:081301e694b3af8cd7f99df4b3b394d14be7bec6148f8b2b947f800255279c80"
+        },
+        "SeveritySource": "ubuntu",
+        "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2017-15131",
+        "Title": "xdg-user-dirs, gnome-session: Xsession creation of XDG user directories does not honor system umask policy",
+        "Description": "It was found that system umask policy is not being honored when creating XDG user directories, since Xsession sources xdg-user-dirs.sh before setting umask policy. This only affects xdg-user-dirs before 0.15.5 as shipped with Red Hat Enterprise Linux.",
+        "Severity": "LOW",
+        "CweIDs": [
+          "CWE-284"
+        ],
+        "CVSS": {
+          "nvd": {
+            "V2Vector": "AV:L/AC:L/Au:N/C:P/I:P/A:P",
+            "V3Vector": "CVSS:3.0/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "V2Score": 4.6,
+            "V3Score": 7.8
+          },
+          "redhat": {
+            "V3Vector": "CVSS:3.0/AV:L/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:N",
+            "V3Score": 3.3
+          }
+        },
+        "References": [
+          "http://bugs.freedesktop.org/show_bug.cgi?id=102303",
+          "https://access.redhat.com/errata/RHSA-2018:0842",
+          "https://bugzilla.redhat.com/show_bug.cgi?id=1412762",
+          "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2017-15131",
+          "https://linux.oracle.com/cve/CVE-2017-15131.html",
+          "https://linux.oracle.com/errata/ELSA-2018-0842.html",
+          "https://lists.apache.org/thread.html/rf9fa47ab66495c78bb4120b0754dd9531ca2ff0430f6685ac9b07772@%3Cdev.mina.apache.org%3E"
+        ],
+        "PublishedDate": "2018-01-09T21:29:00Z",
+        "LastModifiedDate": "2021-02-25T17:15:00Z"
+      }
+    ]
+  },
+  {
+    "Target": "src/strix/yarn.lock",
+    "Type": "yarn",
+    "Vulnerabilities": [
+      {
+        "VulnerabilityID": "CVE-2020-7662",
+        "PkgName": "websocket-extensions",
+        "InstalledVersion": "0.1.3",
+        "FixedVersion": "0.1.4",
+        "Layer": {
+          "DiffID": "sha256:3bbe4d85fe2f613c537979ef4aee552e8900dc8ac083b44d569a3615b0154da3"
+        },
+        "SeveritySource": "nvd",
+        "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2020-7662",
+        "Title": "npmjs-websocket-extensions: ReDoS vulnerability in Sec-WebSocket-Extensions parser",
+        "Description": "websocket-extensions npm module prior to 0.1.4 allows Denial of Service (DoS) via Regex Backtracking. The extension parser may take quadratic time when parsing a header containing an unclosed string parameter value whose content is a repeating two-byte sequence of a backslash and some other character. This could be abused by an attacker to conduct Regex Denial Of Service (ReDoS) on a single-threaded server by providing a malicious payload with the Sec-WebSocket-Extensions header.",
+        "Severity": "HIGH",
+        "CVSS": {
+          "nvd": {
+            "V2Vector": "AV:N/AC:L/Au:N/C:N/I:N/A:P",
+            "V3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+            "V2Score": 5,
+            "V3Score": 7.5
+          },
+          "redhat": {
+            "V3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+            "V3Score": 7.5
+          }
+        },
+        "References": [
+          "https://blog.jcoglan.com/2020/06/02/redos-vulnerability-in-websocket-extensions",
+          "https://github.com/advisories/GHSA-g78m-2chm-r7qv",
+          "https://github.com/faye/websocket-extensions-node/commit/29496f6838bfadfe5a2f85dff33ed0ba33873237",
+          "https://github.com/faye/websocket-extensions-node/security/advisories/GHSA-g78m-2chm-r7qv",
+          "https://nvd.nist.gov/vuln/detail/CVE-2020-7662",
+          "https://snyk.io/vuln/SNYK-JS-WEBSOCKETEXTENSIONS-570623"
+        ],
+        "PublishedDate": "2020-06-02T19:15:00Z",
+        "LastModifiedDate": "2020-12-23T18:22:00Z"
+      },
+      {
+        "VulnerabilityID": "GHSA-p9pc-299p-vxgp",
+        "PkgName": "yargs-parser",
+        "InstalledVersion": "13.1.1",
+        "FixedVersion": "5.0.0-security.0, 13.1.2, 18.1.2, 15.0.1",
+        "Layer": {
+          "DiffID": "sha256:3bbe4d85fe2f613c537979ef4aee552e8900dc8ac083b44d569a3615b0154da3"
+        },
+        "PrimaryURL": "https://github.com/advisories/GHSA-p9pc-299p-vxgp",
+        "Title": "Prototype Pollution in yargs-parser",
+        "Description": "Affected versions of `yargs-parser` are vulnerable to prototype pollution. Arguments are not properly sanitized, allowing an attacker to modify the prototype of `Object`, causing the addition or modification of an existing property that will exist on all objects.  \nParsing the argument `--foo.__proto__.bar baz'` adds a `bar` property with value `baz` to all objects. This is only exploitable if attackers have control over the arguments being passed to `yargs-parser`.\n\n\n\n## Recommendation\n\nUpgrade to versions 13.1.2, 15.0.1, 18.1.1 or later.",
+        "Severity": "LOW",
+        "References": [
+          "https://github.com/advisories/GHSA-p9pc-299p-vxgp",
+          "https://github.com/yargs/yargs-parser/commit/63810ca1ae1a24b08293a4d971e70e058c7a41e2"
+        ]
+      },
+      {
+        "VulnerabilityID": "GHSA-p9pc-299p-vxgp",
+        "PkgName": "yargs-parser",
+        "InstalledVersion": "5.0.0",
+        "FixedVersion": "5.0.0-security.0, 13.1.2, 18.1.2, 15.0.1",
+        "Layer": {
+          "DiffID": "sha256:3bbe4d85fe2f613c537979ef4aee552e8900dc8ac083b44d569a3615b0154da3"
+        },
+        "PrimaryURL": "https://github.com/advisories/GHSA-p9pc-299p-vxgp",
+        "Title": "Prototype Pollution in yargs-parser",
+        "Description": "Affected versions of `yargs-parser` are vulnerable to prototype pollution. Arguments are not properly sanitized, allowing an attacker to modify the prototype of `Object`, causing the addition or modification of an existing property that will exist on all objects.  \nParsing the argument `--foo.__proto__.bar baz'` adds a `bar` property with value `baz` to all objects. This is only exploitable if attackers have control over the arguments being passed to `yargs-parser`.\n\n\n\n## Recommendation\n\nUpgrade to versions 13.1.2, 15.0.1, 18.1.1 or later.",
+        "Severity": "LOW",
+        "References": [
+          "https://github.com/advisories/GHSA-p9pc-299p-vxgp",
+          "https://github.com/yargs/yargs-parser/commit/63810ca1ae1a24b08293a4d971e70e058c7a41e2"
+        ]
+      }
+    ]
+  }
+]

@@ -9,25 +9,10 @@ import (
 	"github.com/m-mizutani/golambda"
 )
 
-// Hint: Not thread safe
-func (x *Controller) setupSQSClient() error {
-	if x.sqsClient != nil {
-		return nil
-	}
-
-	// catbox sends to only SQS queue in same region with Lambda.
-	sqsClient, err := x.adaptors.NewSQS(x.AwsRegion)
-	if err != nil {
-		return golambda.WrapError(err, "Failed to create SQS client").With("region", x.AwsRegion)
-	}
-
-	x.sqsClient = sqsClient
-	return nil
-}
-
 func (x *Controller) sendSQSMessage(url string, data interface{}) error {
-	// Run setup only leveraged to avoid high frequency AssumeRole call
-	if err := x.setupSQSClient(); err != nil {
+	// SQS region must be same with Lambda region
+	client, err := x.adaptors.NewSQS(x.AwsRegion)
+	if err != nil {
 		return err
 	}
 
@@ -40,7 +25,7 @@ func (x *Controller) sendSQSMessage(url string, data interface{}) error {
 		QueueUrl:    &url,
 		MessageBody: aws.String(string(raw)),
 	}
-	if _, err := x.sqsClient.SendMessage(input); err != nil {
+	if _, err := client.SendMessage(input); err != nil {
 		return golambda.WrapError(err, "sqs.SendMessage").With("input", input)
 	}
 

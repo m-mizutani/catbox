@@ -18,7 +18,7 @@ type DBClient interface {
 
 	// ImageLayerIndex
 	PutImageLayerDigest(layerDigest *model.ImageLayerIndex) error
-	LookupImageLayerDigests(digests []string) ([]*model.ImageLayerIndex, error)
+	LookupImageLayerDigest(digest string) ([]*model.ImageLayerIndex, error)
 }
 
 type DBClientFactory func(region, tableName string) (DBClient, error)

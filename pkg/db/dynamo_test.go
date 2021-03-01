@@ -4,9 +4,10 @@ import (
 	"testing"
 
 	"github.com/m-mizutani/catbox/pkg/db"
+	"github.com/m-mizutani/catbox/pkg/interfaces"
 )
 
-func newTestTable(t *testing.T) *db.DynamoClient {
+func newTestTable(t *testing.T) interfaces.DBClient {
 	tableName := "dynamodb-test"
 
 	client, err := db.NewDynamoClientLocal("ap-northeast-1", tableName)
@@ -14,11 +15,11 @@ func newTestTable(t *testing.T) *db.DynamoClient {
 		panic("Failed to use local DynamoDB: " + err.Error())
 	}
 
-	t.Log("Created table name: ", client.TableName())
+	t.Log("Created table name: ", client.(*db.DynamoClient).TableName())
 	return client
 }
 
-func deleteTestTable(t *testing.T, client *db.DynamoClient) {
+func deleteTestTable(t *testing.T, client interfaces.DBClient) {
 	if t.Failed() {
 		return // Failed test table is not deleted
 	}
