@@ -158,7 +158,7 @@ func (x *Controller) GetRegistryAPIToken(registry string) (string, error) {
 	return aws.StringValue(output.AuthorizationData[0].AuthorizationToken), nil
 }
 
-// GetImageManifest returns manifest of a target image
+// GetImageManifest returns manifest of a target image. Use digest
 func (x *Controller) GetImageManifest(target *model.Image, authToken string) (*ImageManifestResult, error) {
 	reference := target.Digest
 	if reference == "" {
@@ -245,4 +245,28 @@ func (x *Controller) GetImageEnv(manifest *ImageManifestResult, target *model.Im
 	}
 
 	return config.Config.Env, nil
+}
+
+func (x *Controller) GetRepositoryList(region string) ([]*model.Image, error) {
+	client, err := x.adaptors.NewECR(region)
+	if err != nil {
+		return nil, golambda.WrapError(err).With("region", region)
+	}
+
+	input := &ecr.DescribeRepositoriesInput{}
+	var images []*model.Image
+
+	client.DescribeRepositoriesPages(input, func(out *ecr.DescribeRepositoriesOutput, _ bool) bool {
+		for _, repo := range out.Repositories {
+			img, parseErr := model.ParseRepositoryURI(*repo.RepositoryUri)
+			if parseErr != nil {
+				err = parseErr
+				return false // stop iteration
+			}
+			images = append(images, img)
+		}
+		return true
+	})
+
+	return images, nil
 }

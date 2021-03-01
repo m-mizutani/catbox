@@ -7,6 +7,5 @@ import (
 
 // ListRepository returns list of model.Image with environment variables and image layer list in registry.
 func ListRepository(ctrl *controller.Controller, registry string) ([]*model.Image, error) {
-
 	return nil, nil
 }

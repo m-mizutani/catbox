@@ -2,6 +2,7 @@ package usecase_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"io/ioutil"
 	"os"
@@ -158,6 +159,15 @@ func TestTrivyScanImage(t *testing.T) {
 			assert.Contains(t, mock.s3.regions, "ap-northeast-0")
 			assert.Equal(t, "example-bucket", *mock.s3.putObjectInput[0].Bucket)
 			assert.Equal(t, "testing/path/to/prefix/trivy.json.gz", *mock.s3.putObjectInput[0].Key)
+		})
+
+		t.Run("sent an inspect request message to inspect queue", func(t *testing.T) {
+			require.Equal(t, 1, len(mock.sqs.input))
+			assert.Equal(t, "https://sqs.us-east-2.amazonaws.com/123456789012/inspect-queue", *mock.sqs.input[0].QueueUrl)
+
+			var req model.InspectRequestMessage
+			require.NoError(t, json.Unmarshal([]byte(*mock.sqs.input[0].MessageBody), &req))
+			assert.NotEmpty(t, req.ReportID)
 		})
 	})
 }

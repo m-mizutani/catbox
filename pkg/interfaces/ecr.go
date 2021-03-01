@@ -79,7 +79,7 @@ func (x ECRPushImageEvent) Layers() ([]string, error) {
 // ECRClient is ECR interface for catbox
 type ECRClient interface {
 	DescribeImagesPages(*ecr.DescribeImagesInput, func(*ecr.DescribeImagesOutput, bool) bool) error
-	DescribeRepositoriesPages(*ecr.DescribeRepositoriesInput, func(*ecr.DescribeRepositoriesOutput, bool) bool) error
+	DescribeRepositoriesPages(*ecr.DescribeRepositoriesInput, func(out *ecr.DescribeRepositoriesOutput, lastPage bool) bool) error
 	GetAuthorizationToken(*ecr.GetAuthorizationTokenInput) (*ecr.GetAuthorizationTokenOutput, error)
 }
 

@@ -92,7 +92,7 @@ function setupQueues(stack :cdk.Stack): CatBoxQueues {
     },
   });
 
-  const inspectDLQ = new sqs.Queue(stack, 'inspectLQ');
+  const inspectDLQ = new sqs.Queue(stack, 'inspectDLQ');
   const inspectQueue = new sqs.Queue(stack, 'inspectQueue', {
     visibilityTimeout: inspectQueueTimeout,
     deadLetterQueue: {
