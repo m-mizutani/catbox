@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/Netflix/go-env"
+	"github.com/m-mizutani/catbox/pkg/db"
 	"github.com/m-mizutani/catbox/pkg/interfaces"
 	"github.com/m-mizutani/golambda"
 )
@@ -91,4 +92,6 @@ var defaultAdaptors = Adaptors{
 	ReadFile: ioutil.ReadFile,
 
 	HTTP: &http.Client{},
+
+	NewDBClient: db.NewDynamoClient,
 }

@@ -11,10 +11,12 @@ import (
 func newScanReporTemplate() *model.ScanReport {
 	return &model.ScanReport{
 		Image: model.Image{
-			Registry:     "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
-			Repo:         "star",
-			Tag:          "main",
-			Digest:       "12345678",
+			Registry: "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
+			Repo:     "star",
+			Tag:      "main",
+			Digest:   "12345678",
+		},
+		ImageMeta: model.ImageMeta{
 			LayerDigests: make([]string, 0),
 			Env:          make([]string, 0),
 		},

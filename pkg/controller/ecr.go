@@ -7,12 +7,13 @@ import (
 	"net/http"
 	"regexp"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/m-mizutani/catbox/pkg/model"
 	"github.com/m-mizutani/golambda"
 )
 
-type imageManifestResult struct {
+type ImageManifestResult struct {
 	Config        imageLayer      `json:"config"`
 	Layers        []imageLayer    `json:"layers"`
 	MediaType     string          `json:"mediaType"`
@@ -131,34 +132,34 @@ func extractAccountFromRegistry(registry string) (string, error) {
 }
 
 // GetRegistryAPIToken gets registry access token via ecr.GetAuthorizationToken.
-func (x *Controller) GetRegistryAPIToken(registry string) (*string, error) {
+func (x *Controller) GetRegistryAPIToken(registry string) (string, error) {
 	ecrRegion, err := extractRegionFromRegistry(registry)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	client, err := x.adaptors.NewECR(ecrRegion)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	input := &ecr.GetAuthorizationTokenInput{}
 	output, err := client.GetAuthorizationToken(input)
 	if err != nil {
-		return nil, golambda.WrapError(err, "Fail to get auth token of registry to fetch image manifest")
+		return "", golambda.WrapError(err, "Fail to get auth token of registry to fetch image manifest")
 	}
 
 	if len(output.AuthorizationData) == 0 {
-		return nil, golambda.NewError("Fail to get auth token of registry. No output.AuthorizationData").With("output", output)
+		return "", golambda.NewError("Fail to get auth token of registry. No output.AuthorizationData").With("output", output)
 	}
 	if len(output.AuthorizationData) > 1 {
-		logger.With("count", len(output.AuthorizationData)).Info("Too many auth token from ecr.GetAuthorizationToken")
+		logger.With("count", len(output.AuthorizationData)).Warn("Too many auth token from ecr.GetAuthorizationToken")
 	}
 
-	return output.AuthorizationData[0].AuthorizationToken, nil
+	return aws.StringValue(output.AuthorizationData[0].AuthorizationToken), nil
 }
 
-// GetImageManifest
-func (x *Controller) GetImageManifest(target *model.Image, authToken string) (*imageManifestResult, error) {
+// GetImageManifest returns manifest of a target image
+func (x *Controller) GetImageManifest(target *model.Image, authToken string) (*ImageManifestResult, error) {
 	reference := target.Digest
 	if reference == "" {
 		reference = target.Tag
@@ -181,7 +182,7 @@ func (x *Controller) GetImageManifest(target *model.Image, authToken string) (*i
 		return nil, golambda.WrapError(err, "Fail to request to registry").With("url", url).With("status", resp.StatusCode).With("body", string(body))
 	}
 
-	var manifest imageManifestResult
+	var manifest ImageManifestResult
 	body, err := ioutil.ReadAll(resp.Body) // Do not use json.Decoder for trouble shooting
 
 	if err != nil {
@@ -216,7 +217,7 @@ func (x *Controller) GetImageManifest(target *model.Image, authToken string) (*i
 	}
 }
 
-func (x *Controller) getImageEnv(manifest *imageManifestResult, target *model.Image, authToken string) ([]string, error) {
+func (x *Controller) GetImageEnv(manifest *ImageManifestResult, target *model.Image, authToken string) ([]string, error) {
 	url := fmt.Sprintf("https://%s/v2/%s/blobs/%s", target.Registry, target.Repo, manifest.Config.Digest)
 
 	req, err := http.NewRequest("GET", url, nil)

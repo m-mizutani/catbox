@@ -33,6 +33,7 @@ func TrivyScanImage(ctrl *controller.Controller, req *model.ScanRequestMessage) 
 
 	report := &model.ScanReport{
 		Image:       req.Target,
+		ImageMeta:   req.TargetMeta,
 		ScanType:    model.ScanTypeTrivy,
 		RequestedAt: req.RequestedAt.UTC().Unix(),
 		RequestedBy: req.RequestedBy,

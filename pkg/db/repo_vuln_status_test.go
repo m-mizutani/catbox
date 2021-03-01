@@ -11,12 +11,10 @@ import (
 func newRepoVulnStatusTemplate() *model.RepoVulnStatus {
 	return &model.RepoVulnStatus{
 		Image: model.Image{
-			Registry:     "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
-			Repo:         "test-image",
-			Tag:          "good-tag",
-			Digest:       "12345678",
-			LayerDigests: make([]string, 0),
-			Env:          make([]string, 0),
+			Registry: "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
+			Repo:     "test-image",
+			Tag:      "good-tag",
+			Digest:   "12345678",
 		},
 
 		VulnID:    "CVE-2001-1234",

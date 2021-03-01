@@ -2,12 +2,15 @@ package model
 
 // Image is docker image identifier
 type Image struct {
-	Registry     string
-	Repo         string
-	Tag          string
-	Digest       string   `json:",omitempty"`
-	LayerDigests []string `json:",omitempty"`
-	Env          []string `json:",omitempty"`
+	Registry string
+	Repo     string
+	Tag      string
+	Digest   string `json:",omitempty"`
+}
+
+type ImageMeta struct {
+	LayerDigests []string
+	Env          []string
 }
 
 // RegistryRepoTag returns "{registry}/{repo}:{tag}"

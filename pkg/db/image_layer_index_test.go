@@ -15,31 +15,25 @@ func TestImageLayerDigests(t *testing.T) {
 
 		idx1 := &model.ImageLayerIndex{
 			Image: model.Image{
-				Registry:     "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
-				Repo:         "blue",
-				Digest:       "abc123",
-				LayerDigests: make([]string, 0),
-				Env:          make([]string, 0),
+				Registry: "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
+				Repo:     "blue",
+				Digest:   "abc123",
 			},
 			LayerDigest: "caffee",
 		}
 		idx2 := &model.ImageLayerIndex{
 			Image: model.Image{
-				Registry:     "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
-				Repo:         "orange",
-				Digest:       "321bca",
-				LayerDigests: make([]string, 0),
-				Env:          make([]string, 0),
+				Registry: "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
+				Repo:     "orange",
+				Digest:   "321bca",
 			},
 			LayerDigest: "beef00",
 		}
 		idx3 := &model.ImageLayerIndex{
 			Image: model.Image{
-				Registry:     "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
-				Repo:         "five",
-				Digest:       "112233",
-				LayerDigests: make([]string, 0),
-				Env:          make([]string, 0),
+				Registry: "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
+				Repo:     "five",
+				Digest:   "112233",
 			},
 			LayerDigest: "xxxxxx",
 		}

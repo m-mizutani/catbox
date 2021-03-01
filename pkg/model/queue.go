@@ -10,6 +10,7 @@ type ScanRequestMessage struct {
 	RequestedBy string
 	RequestedAt time.Time
 	Target      Image
+	TargetMeta  ImageMeta
 
 	// Output to
 	OutS3Prefix string
