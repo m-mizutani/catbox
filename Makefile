@@ -1,6 +1,6 @@
 LAMBDA_SRC = pkg/*/*.go
 LAMBDA_FUNCTIONS = \
-	build/api \
+	build/apiHandler \
 	build/enqueueScan \
 	build/inspect \
 	build/notify \
@@ -13,8 +13,8 @@ TRIVY_BIN=./build/trivy
 
 lambda: $(LAMBDA_FUNCTIONS)
 
-build/api: lambda/api/*.go $(LAMBDA_SRC)
-	go build -o build/api ./lambda/api 
+build/apiHandler: lambda/apiHandler/*.go $(LAMBDA_SRC)
+	go build -o build/apiHandler ./lambda/apiHandler
 build/enqueueScan: lambda/enqueueScan/*.go $(LAMBDA_SRC)
 	go build -o build/enqueueScan ./lambda/enqueueScan
 build/inspect: lambda/inspect/*.go $(LAMBDA_SRC)

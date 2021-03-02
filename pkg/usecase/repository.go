@@ -5,7 +5,11 @@ import (
 	"github.com/m-mizutani/catbox/pkg/model"
 )
 
-// ListRepository returns list of model.Image with environment variables and image layer list in registry.
+// ListRepository returns list of
 func ListRepository(ctrl *controller.Controller, registry string) ([]*model.Image, error) {
 	return nil, nil
 }
+
+func GetRepository(ctrl *controller.Controller, registry, repo, tag string) {}
+
+func GetRepoVulnStatus(ctrl *controller.Controller, registry, repo, tag string) {}

@@ -13,8 +13,9 @@ import * as events from '@aws-cdk/aws-events';
 import * as eventsTargets from '@aws-cdk/aws-events-targets';
 import { SqsSubscription } from '@aws-cdk/aws-sns-subscriptions';
 
-import * as path from 'path';
 import { LambdaFunction } from '@aws-cdk/aws-events-targets';
+import * as path from 'path';
+import * as fs from 'fs';
 
 // Definitions
 const scanQueueTimeout = cdk.Duration.seconds(300);
@@ -41,7 +42,7 @@ interface CatBoxQueues {
 };
 
 interface CatBoxFunctions {
-  readonly api: lambda.Function;
+  readonly apiHandler: lambda.Function;
   readonly enqueueScan: lambda.Function;
   readonly inspect: lambda.Function;
   readonly notify: lambda.Function;
@@ -79,6 +80,8 @@ export class CatboxStack extends cdk.Stack {
     // TODO: create S3 bucket if S3Region, S3Bucket and S3Prefix is not provided
 
     this.functions = setupLambda(this, props, this.metaTable, this.queues);
+
+    setupWeb(this, this.functions.apiHandler);
   }
 }
 
@@ -164,8 +167,8 @@ function setupLambda(stack: cdk.Stack, props: CatBoxProps, table: dynamodb.Table
   };
 
   const functions = {
-    api: newLambda(stack, {
-      funcName: 'api',
+    apiHandler: newLambda(stack, {
+      funcName: 'apiHandler',
       events: [],
       timeout: cdk.Duration.seconds(10),
     }),
@@ -216,4 +219,42 @@ function setupLambda(stack: cdk.Stack, props: CatBoxProps, table: dynamodb.Table
   });
 
   return functions;
+}
+
+function setupWeb(stack: cdk.Stack, apiHandler: lambda.Function) {
+  const api = new apigateway.LambdaRestApi(stack, 'catboxAPI', {
+    handler: apiHandler,
+    proxy: false,
+    cloudWatchRole: false,
+    endpointTypes: [apigateway.EndpointType.PRIVATE],
+    policy: new iam.PolicyDocument({
+      statements: [
+        new iam.PolicyStatement({
+          actions: ['execute-api:Invoke'],
+          resources: ['execute-api:/*/*'],
+          effect: iam.Effect.ALLOW,
+          principals: [new iam.AnyPrincipal()],
+        }),
+      ],
+    }),
+  });
+
+  // UI assets
+  api.root.addMethod('GET');
+  api.root.addResource('js').addResource('bundle.js').addMethod("GET");
+
+  // auth
+  const auth = api.root.addResource('auth');
+  auth.addMethod('GET');
+  auth.addResource('logout').addMethod('GET');
+  const authGoogle = auth.addResource('google');
+  authGoogle.addMethod('GET');
+  authGoogle.addResource('callback').addMethod('GET');
+
+  // API
+  const v1 = api.root.addResource('api').addResource('v1');
+
+  // repository
+  const repository = v1.addResource('repository');
+  repository.addMethod('GET');
 }

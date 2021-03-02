@@ -17,12 +17,14 @@
 ### Vulnerability Info
 - PK: `vuln_info:{vuln_id}`
 - SK: `{pkg_type}/{pkg_name}`
+- PK2: `list:vuln_info`
+- SK2: `{created_at}/{vuln_id}`
 
 ### Scan report
 - PK: `report:{registry}/{repository}:{tag}`
 - SK: `{scan_type}/{timestamp}/{report_id}`
-- PK: `list:report`
-- SK: `{report_id}`
+- PK2: `list:report`
+- SK2: `{report_id}`
 
 ### Repository vulnerability status
 - PK: `repo_vuln_status:{registry}/{repository}:{tag}`
