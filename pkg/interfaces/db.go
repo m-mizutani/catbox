@@ -6,10 +6,18 @@ type DBClient interface {
 	// Management
 	Close() error
 
+	// StatusSequence
+	RetrieveStatusSequence() (int64, error)
+
 	// RepoVulnStatus
-	PutRepoVulnStatusBatch(vulnStatuses []*model.RepoVulnStatus) error
-	GetRepoVulnStatusByRepo(registry, repo, tag string) ([]*model.RepoVulnStatus, error)
+	CreateRepoVulnStatus(status *model.RepoVulnStatus) (bool, error)
+	UpdateRepoVulnStatus(changeLog *model.RepoVulnChangeLog) (bool, error)
+	GetRepoVulnStatusByRepo(img *model.Image) ([]*model.RepoVulnStatus, error)
 	GetRepoVulnStatusByVulnID(vulnID string) ([]*model.RepoVulnStatus, error)
+
+	// RepoVulnChangeLog
+	GetRepoVulnChangeLogs(img *model.Image) ([]*model.RepoVulnChangeLog, error)
+	GetRepoVulnEntryChangeLogs(img *model.Image, entry *model.RepoVulnEntry) ([]*model.RepoVulnChangeLog, error)
 
 	// ScanReport
 	PutScanReport(report *model.ScanReport) error

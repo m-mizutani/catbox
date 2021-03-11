@@ -9,6 +9,11 @@ import (
 
 var logger = golambda.Logger
 
+const (
+	contextControllerKey = "controller"
+	contextRequestIDKey  = "requestID"
+)
+
 func SetupBase(engine *gin.Engine, ctrl *controller.Controller) {
 	engine.Use(func(c *gin.Context) {
 		reqID := uuid.New().String()

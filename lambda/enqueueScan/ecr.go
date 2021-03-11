@@ -53,7 +53,7 @@ func handleECREvent(ctrl *controller.Controller, event cloudWatchEvent) error {
 			Digest:   event.Detail.ResponseElements.Image.ImageID.ImageDigest,
 		}
 
-		if err := usecase.EnqueueScanRequest(ctrl, target, "ecr.PushImage"); err != nil {
+		if err := usecase.EnqueueScanRequest(ctrl, target, "ecr.PutImage"); err != nil {
 			return err
 		}
 	}

@@ -15,6 +15,10 @@ func TrivyScanImage(ctrl *controller.Controller, req *model.ScanRequestMessage) 
 			return err
 		}
 	}
+	statusSeq, err := ctrl.DB().RetrieveStatusSequence()
+	if err != nil {
+		return err
+	}
 
 	invokedAt := time.Now().UTC()
 	trivyResults, err := ctrl.InvokeTrivyScan(req.Target, cacheDir)
@@ -26,15 +30,16 @@ func TrivyScanImage(ctrl *controller.Controller, req *model.ScanRequestMessage) 
 	logger.With("len(results)", len(trivyResults)).With("req", req).Info("Scanned")
 	logger.With("results", trivyResults).Debug("Scanned results")
 
-	outputPath, err := ctrl.UploadTrivyReport(trivyResults, req.S3Key(model.ScanTypeTrivy))
+	outputPath, err := ctrl.UploadTrivyReport(trivyResults, req.S3Key(model.ScannerTrivy))
 	if err != nil {
 		return err
 	}
 
 	report := &model.ScanReport{
+		StatusSeq:   statusSeq,
 		Image:       req.Target,
 		ImageMeta:   req.TargetMeta,
-		ScanType:    model.ScanTypeTrivy,
+		ScannedBy:   model.ScannerTrivy,
 		RequestedAt: req.RequestedAt.UTC().Unix(),
 		RequestedBy: req.RequestedBy,
 		InvokedAt:   invokedAt.Unix(),

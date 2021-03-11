@@ -20,7 +20,7 @@ func newScanReporTemplate() *model.ScanReport {
 			LayerDigests: make([]string, 0),
 			Env:          make([]string, 0),
 		},
-		ScanType:    model.ScanTypeTrivy,
+		ScannedBy:   model.ScannerTrivy,
 		RequestedAt: 123456,
 		RequestedBy: "ecr.PutImage",
 		InvokedAt:   234567,
@@ -82,6 +82,5 @@ func TestScanReport(t *testing.T) {
 			require.NoError(t, err)
 			require.Nil(t, resp)
 		})
-
 	})
 }

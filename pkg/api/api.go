@@ -4,11 +4,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const (
-	contextControllerKey = "controller"
-	contextRequestIDKey  = "requestID"
-)
-
 // SetupAPI sets API handlers to gin.RouterGroup
 func SetupAPI(engine *gin.Engine) {
 	r := engine.Group("/api/v1")

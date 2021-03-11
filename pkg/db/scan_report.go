@@ -45,11 +45,11 @@ func (x *DynamoClient) PutScanReport(report *model.ScanReport) error {
 
 	record := dynamoRecord{
 		PK:  scanReportPK(report.Registry, report.Repo, report.Tag),
-		SK:  string(report.ScanType) + "/" + time.Unix(report.ScannedAt, 0).Format("2006-01-02T15:04:05") + "/" + report.ReportID,
+		SK:  string(report.ScannedBy) + "/" + time.Unix(report.ScannedAt, 0).Format("2006-01-02T15:04:05") + "/" + report.ReportID,
 		PK2: scanReportPK2(),
 		SK2: scanReportSK2(report.ReportID),
 
-		Docs: report,
+		Doc: report,
 	}
 
 	if err := x.table.Put(record).Run(); err != nil {

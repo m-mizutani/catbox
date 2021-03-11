@@ -50,11 +50,16 @@ interface CatBoxFunctions {
   readonly updateDB: lambda.Function;
 };
 
+interface CatBoxTopics {
+  readonly changeTopic: sns.Topic;
+}
+
 export class CatboxStack extends cdk.Stack {
   readonly notifyTopic: sns.Topic;
 
   readonly metaTable: dynamodb.Table;
   readonly queues: CatBoxQueues;
+  readonly topics: CatBoxTopics;
   readonly functions: CatBoxFunctions;
 
   constructor(scope: cdk.Construct, id: string, props: CatBoxProps) {
@@ -76,10 +81,12 @@ export class CatboxStack extends cdk.Stack {
 
     // SQS
     this.queues = setupQueues(this);
+    // SNS
+    this.topics = setupTopics(this);
 
     // TODO: create S3 bucket if S3Region, S3Bucket and S3Prefix is not provided
 
-    this.functions = setupLambda(this, props, this.metaTable, this.queues);
+    this.functions = setupLambda(this, props, this.metaTable, this.queues, this.topics);
 
     setupWeb(this, this.functions.apiHandler);
   }
@@ -112,6 +119,12 @@ function setupQueues(stack :cdk.Stack): CatBoxQueues {
   };
 }
 
+function setupTopics(stack :cdk.Stack): CatBoxTopics {
+  return {
+    changeTopic: new sns.Topic(stack, 'changeTopic'),
+  };
+}
+
 interface lambdaConfig {
   readonly funcName: string;
   readonly events: lambda.IEventSource[],
@@ -119,7 +132,7 @@ interface lambdaConfig {
   readonly memorySize?: number;
 };
 
-function setupLambda(stack: cdk.Stack, props: CatBoxProps, table: dynamodb.Table, queues: CatBoxQueues): CatBoxFunctions {
+function setupLambda(stack: cdk.Stack, props: CatBoxProps, table: dynamodb.Table, queues: CatBoxQueues, topics: CatBoxTopics): CatBoxFunctions {
   // IAM role
   const lambdaRole = (props.lambdaRoleARN !== undefined) ? iam.Role.fromRoleArn(stack, 'LambdaRole', props.lambdaRoleARN, {
     mutable: false,
@@ -146,6 +159,7 @@ function setupLambda(stack: cdk.Stack, props: CatBoxProps, table: dynamodb.Table
 
     SCAN_QUEUE_URL: queues.scanQueue.queueUrl,
     INSPECT_QUEUE_URL: queues.inspectQueue.queueUrl,
+    CHANGE_TOPIC_ARN: topics.changeTopic.topicArn,
 
     SENTRY_DSN: props.sentryDSN || "",
     SENTRY_ENV: props.sentryENV || "",

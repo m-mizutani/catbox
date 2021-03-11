@@ -48,6 +48,7 @@ type Config struct {
 
 	ScanQueueURL    string `env:"SCAN_QUEUE_URL"`
 	InspectQueueURL string `env:"INSPECT_QUEUE_URL"`
+	ChangeTopicARN  string `env:"CHANGE_TOPIC_ARN"`
 }
 
 // UnmarshalEnvVars retrieves environment variables for lambda
@@ -63,6 +64,7 @@ type Adaptors struct {
 	// AWS
 	NewS3  interfaces.S3ClientFactory
 	NewSQS interfaces.SQSClientFactory
+	NewSNS interfaces.SNSClientFactory
 	NewECR interfaces.ECRClientFactory
 
 	// FileSystem
@@ -83,6 +85,7 @@ type Adaptors struct {
 var defaultAdaptors = Adaptors{
 	NewS3:  interfaces.NewS3Client,
 	NewSQS: interfaces.NewSQSClient,
+	NewSNS: interfaces.NewSNSClient,
 	NewECR: interfaces.NewECRClient,
 
 	Exec:     interfaces.DefaultExecOutput,

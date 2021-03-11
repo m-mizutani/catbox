@@ -12,9 +12,9 @@ func imageLayerIndexPK(layerDigest string) string {
 // PutImageLayerDigest inserts layerDigest
 func (x *DynamoClient) PutImageLayerDigest(index *model.ImageLayerIndex) error {
 	record := dynamoRecord{
-		PK:   imageLayerIndexPK(index.LayerDigest),
-		SK:   index.RegistryRepoDigest(),
-		Docs: index,
+		PK:  imageLayerIndexPK(index.LayerDigest),
+		SK:  index.RegistryRepoDigest(),
+		Doc: index,
 	}
 
 	if err := x.table.Put(record).Run(); err != nil {

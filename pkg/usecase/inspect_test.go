@@ -1,25 +1,44 @@
 package usecase_test
 
 import (
-	"encoding/json"
 	"io"
 	"io/ioutil"
 	"os"
 	"path"
 	"testing"
-	"time"
 
-	"github.com/google/uuid"
 	"github.com/m-mizutani/catbox/pkg/controller"
 	"github.com/m-mizutani/catbox/pkg/db"
 	"github.com/m-mizutani/catbox/pkg/interfaces"
 	"github.com/m-mizutani/catbox/pkg/model"
 	"github.com/m-mizutani/catbox/pkg/usecase"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func newControllerForTrivyScanImageTest(t *testing.T) (*controller.Controller, *mockSet) {
+func TestInspect(t *testing.T) {
+	t.Run("Error with invalid report ID", func(t *testing.T) {
+		ctrl, _ := newControllerForInspectTest(t)
+		req := &model.InspectRequestMessage{
+			ReportID: "no-such-report",
+		}
+
+		assert.ErrorIs(t, usecase.InspectScanReport(ctrl, req), usecase.ErrReportNotFound)
+	})
+
+	t.Run("Normal case", func(t *testing.T) {
+		ctrl, mock := newControllerForInspectTest(t)
+		req := &model.InspectRequestMessage{
+			ReportID: "report-id-1",
+		}
+
+		// Run usecase
+		assert.NoError(t, usecase.InspectScanReport(ctrl, req))
+	})
+}
+
+func newControllerForInspectTest(t *testing.T) (*controller.Controller, *mockSet) {
 	mock := &mockSet{}
 
 	ctrl := &controller.Controller{
@@ -73,51 +92,36 @@ func newControllerForTrivyScanImageTest(t *testing.T) (*controller.Controller, *
 		}
 	})
 
+	// -------------------------------
+	// insert base data
+	report := &model.ScanReport{
+		ReportID:  "report-id-1", // Usually ReportID should not be filled, but allow it for testing
+		StatusSeq: 10,
+		Image: model.Image{
+			Registry: "111111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
+			Repo:     "strix",
+			Tag:      "latest",
+		},
+		ImageMeta:   model.ImageMeta{},
+		ScannedBy:   model.ScannerTrivy,
+		RequestedAt: 1234,
+		InvokedAt:   2345,
+		ScannedAt:   3456,
+		RequestedBy: "ecr.PushImage",
+		OutputTo: model.S3Path{
+			Region: "ap-northeast-0",
+			Bucket: "report-bucket", // basically Config.S3Bucket and OutputTo.Bucket should be same. However other bucket is also acceptable for changing main S3 bucket safely.
+			Key:    "path/to/my/report.json.gz",
+		},
+	}
+
+	// Trivy scan result
+	trivyResultData, err := ioutil.ReadFile("../testdata/trivy_output_sample1.json")
+	require.NoError(t, err)
+	mock.s3.saveObject("report-bucket", "path/to/my/report.json.gz", trivyResultData)
+
+	// Save report data
+	require.NoError(t, mock.dbClient.PutScanReport(report))
+
 	return ctrl, mock
-}
-
-func TestTrivyScanImage(t *testing.T) {
-	t.Run("normal case", func(t *testing.T) {
-		ctrl, mock := newControllerForTrivyScanImageTest(t)
-
-		mock.s3.saveObject("example-bucket", "testing/cache/trivy/db/trivy.db", "dummy")
-		mock.s3.saveObject("example-bucket", "testing/cache/trivy/db/metadata.json", "dummy")
-
-		req := &model.ScanRequestMessage{
-			RequestID:   uuid.New().String(),
-			RequestedBy: "ecr.PushImage",
-			RequestedAt: time.Now().UTC(),
-			Target: model.Image{
-				Registry: "111111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
-				Repo:     "strix",
-				Tag:      "latest",
-			},
-			OutS3Prefix: "path/to/prefix/",
-		}
-		require.NoError(t, usecase.TrivyScanImage(ctrl, req))
-
-		t.Run("can get saved ScanReport by repo", func(t *testing.T) {
-			report, err := mock.dbClient.GetLatestScanReportsByRepo("111111111111.dkr.ecr.ap-northeast-1.amazonaws.com", "strix", "latest")
-			require.NoError(t, err)
-			require.NotNil(t, report)
-			assert.Equal(t, req.RequestedAt.Unix(), report.RequestedAt)
-			assert.Greater(t, report.StatusSeq, int64(0))
-		})
-
-		t.Run("report is saved on S3", func(t *testing.T) {
-			require.Equal(t, 1, len(mock.s3.putObjectInput))
-			assert.Contains(t, mock.s3.regions, "ap-northeast-0")
-			assert.Equal(t, "example-bucket", *mock.s3.putObjectInput[0].Bucket)
-			assert.Equal(t, "testing/path/to/prefix/trivy.json.gz", *mock.s3.putObjectInput[0].Key)
-		})
-
-		t.Run("sent an inspect request message to inspect queue", func(t *testing.T) {
-			require.Equal(t, 1, len(mock.sqs.input))
-			assert.Equal(t, "https://sqs.us-east-2.amazonaws.com/123456789012/inspect-queue", *mock.sqs.input[0].QueueUrl)
-
-			var req model.InspectRequestMessage
-			require.NoError(t, json.Unmarshal([]byte(*mock.sqs.input[0].MessageBody), &req))
-			assert.NotEmpty(t, req.ReportID)
-		})
-	})
 }

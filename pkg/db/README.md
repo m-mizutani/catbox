@@ -1,5 +1,9 @@
 # DynamoDB schema
 
+## StatusSequence
+
+- PK: `seq:status`
+- SK: `-`
 ## Repository
 
 ### Repository config
@@ -28,9 +32,19 @@
 
 ### Repository vulnerability status
 - PK: `repo_vuln_status:{registry}/{repository}:{tag}`
-- SK: `{vuln_id}:{pkg_source}:{pkg_name}:{updated_at}`
+- SK:
+    - Package: `{vuln_id}:pkg:{pkg_source}:{pkg_name}`
 - PK2: `repo_vuln_status:{vuln_id}`
-- SK2: `{registry}/{repository}:{tag}:{pkg_source}:{pkg_name}:{updated_at}`
+- SK2:
+    - Package: `{registry}/{repository}:{tag}:pkg:{pkg_source}:{pkg_name}`
+
+### Repository vulnerability change log
+- PK: `repo_vuln_changelog:{registry}/{repository}:{tag}`
+- SK:
+    - Package: `{vuln_id}:pkg:{pkg_source}:{pkg_name}:{seq}`
+- PK2: `repo_vuln_changelog:{vuln_id}`
+- SK2:
+    - Package: `{registry}/{repository}:{tag}:pkg:{pkg_source}:{pkg_name}:{seq}`
 
 ## Team / member
 

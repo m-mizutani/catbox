@@ -57,7 +57,7 @@ func (x *Controller) uploadFileToS3(suffixKey, srcPath string) error {
 	return nil
 }
 
-func (x Controller) uploadS3Data(suffixKey string, reader io.ReadSeeker, encoding *string) (*model.S3Path, error) {
+func (x *Controller) uploadS3Data(suffixKey string, reader io.ReadSeeker, encoding *string) (*model.S3Path, error) {
 	client, err := x.adaptors.NewS3(x.S3Region)
 	if err != nil {
 		return nil, err

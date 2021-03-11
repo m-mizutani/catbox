@@ -11,6 +11,7 @@ import (
 
 	"github.com/aquasecurity/trivy/pkg/report"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/m-mizutani/catbox/pkg/model"
 	"github.com/m-mizutani/golambda"
 )
@@ -86,9 +87,28 @@ func (x *Controller) UploadTrivyReport(report model.TrivyResults, suffixKey stri
 	return s3Path, nil
 }
 
-// DownloadTrivyReport gets report from src S3 object
+// DownloadTrivyReport gets report from src S3 object. src indicates direct s3 path.
 func (x *Controller) DownloadTrivyReport(src *model.S3Path) (model.TrivyResults, error) {
-	return nil, nil
+	s3Client, err := x.adaptors.NewS3(src.Region)
+	if err != nil {
+		return nil, err
+	}
+
+	input := &s3.GetObjectInput{
+		Bucket: &src.Bucket,
+		Key:    &src.Key,
+	}
+	output, err := s3Client.GetObject(input)
+	if err != nil {
+		return nil, golambda.WrapError(err, "s3.GetObject").With("input", input)
+	}
+
+	var results model.TrivyResults
+	if err := json.NewDecoder(output.Body).Decode(&results); err != nil {
+		return nil, golambda.WrapError(err, "json.Decoder.Decode").With("output", output)
+	}
+
+	return results, nil
 }
 
 // HasTrivyDB checks if both of DB and metadata.json exist

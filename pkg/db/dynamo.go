@@ -7,7 +7,9 @@ import (
 	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/google/uuid"
 	"github.com/guregu/dynamo"
 	"github.com/m-mizutani/catbox/pkg/interfaces"
@@ -27,11 +29,18 @@ type dynamoRecord struct {
 	PK2 string `dynamo:"pk2,omitempty" index:"secondary,hash"`
 	SK2 string `dynamo:"sk2,omitempty" index:"secondary,range"`
 
-	Docs interface{} `dynamo:"docs"`
+	Doc interface{} `dynamo:"doc"`
+}
+
+type dynamoMetaSequence struct {
+	PK  string `dynamo:"pk,hash"`
+	SK  string `dynamo:"sk,range"`
+	Seq int64  `dynamo:"seq"`
 }
 
 // DynamoClient is implementation of interfaces.DBClient to use Amazon DynamoDB
 type DynamoClient struct {
+	db        *dynamo.DB
 	tableName string
 	table     dynamo.Table
 	local     bool
@@ -49,8 +58,10 @@ func NewDynamoClient(region, tableName string) (interfaces.DBClient, error) {
 		return nil, err
 	}
 
-	table := dynamo.New(ssn).Table(tableName)
+	db := dynamo.New(ssn)
+	table := db.Table(tableName)
 	return &DynamoClient{
+		db:    db,
 		table: table,
 	}, nil
 }
@@ -92,6 +103,7 @@ func NewDynamoClientLocal(region, tableName string) (interfaces.DBClient, error)
 
 	table := dynamo.New(ssn).Table(tableName)
 	return &DynamoClient{
+		db:        db,
 		local:     true,
 		table:     table,
 		tableName: tableName,
@@ -110,7 +122,7 @@ func (x *DynamoClient) Close() error {
 
 // Unmarshal copy record values to v via encoding and decoding as JSON.
 func (x *dynamoRecord) Unmarshal(v interface{}) error {
-	raw, err := json.Marshal(x.Docs)
+	raw, err := json.Marshal(x.Doc)
 	if err != nil {
 		return golambda.WrapError(err, "json.Marshal").With("x", x)
 	}
@@ -120,4 +132,23 @@ func (x *dynamoRecord) Unmarshal(v interface{}) error {
 	}
 
 	return nil
+}
+
+func isConditionalCheckErr(err error) bool {
+	if ae, ok := err.(awserr.RequestFailure); ok {
+		return ae.Code() == dynamodb.ErrCodeConditionalCheckFailedException
+	}
+	return false
+}
+
+func isTransactionException(err error) bool {
+	if ae, ok := err.(awserr.RequestFailure); ok {
+		switch ae.Code() {
+		case dynamodb.ErrCodeTransactionCanceledException,
+			dynamodb.ErrCodeTransactionConflictException,
+			dynamodb.ErrCodeTransactionInProgressException:
+			return true
+		}
+	}
+	return false
 }
