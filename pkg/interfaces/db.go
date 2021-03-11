@@ -12,6 +12,7 @@ type DBClient interface {
 	// RepoVulnStatus
 	CreateRepoVulnStatus(status *model.RepoVulnStatus) (bool, error)
 	UpdateRepoVulnStatus(changeLog *model.RepoVulnChangeLog) (bool, error)
+	UpdateRepoVulnDescription(img *model.Image, entry *model.RepoVulnEntry, descr string) error
 	GetRepoVulnStatusByRepo(img *model.Image) ([]*model.RepoVulnStatus, error)
 	GetRepoVulnStatusByVulnID(vulnID string) ([]*model.RepoVulnStatus, error)
 

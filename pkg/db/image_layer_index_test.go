@@ -11,7 +11,6 @@ import (
 func TestImageLayerDigests(t *testing.T) {
 	t.Run("Put and lookup layer digests", func(t *testing.T) {
 		client := newTestTable(t)
-		defer deleteTestTable(t, client)
 
 		idx1 := &model.ImageLayerIndex{
 			Image: model.Image{

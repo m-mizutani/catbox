@@ -27,6 +27,7 @@ func newRepoVulnStatusTemplate() *model.RepoVulnStatus {
 		UpdatedAt:  12345,
 		Status:     model.VulnStatusNew,
 		DetectedBy: model.ScannerTrivy,
+		StatusSeq:  5,
 
 		PkgType:             "bundler",
 		PkgInstalledVersion: "1.1",
@@ -58,7 +59,6 @@ func insertBaseRepoVulnStatus(t *testing.T, client interfaces.DBClient) []*model
 func TestRepoVulnStatus(t *testing.T) {
 	t.Run("Put RepoVulnStatus items", func(t *testing.T) {
 		client := newTestTable(t)
-		defer deleteTestTable(t, client)
 
 		s := insertBaseRepoVulnStatus(t, client)
 
@@ -98,16 +98,14 @@ func TestRepoVulnStatus(t *testing.T) {
 					PkgSource: "/tmp/Gemfile.lock",
 					PkgName:   "nanika",
 				},
-				Status:      model.VulnStatusFixed,
-				Description: "blue",
-				UpdatedAt:   1234,
-				StatusSeq:   10,
+				Status:    model.VulnStatusFixed,
+				UpdatedAt: 1234,
+				StatusSeq: 10,
 			}
 		}
 
 		t.Run("Normal case", func(t *testing.T) {
 			client := newTestTable(t)
-			defer deleteTestTable(t, client)
 			_ = insertBaseRepoVulnStatus(t, client)
 
 			t.Run("Normal case", func(t *testing.T) {
@@ -146,7 +144,6 @@ func TestRepoVulnStatus(t *testing.T) {
 
 		t.Run("entry is not found", func(t *testing.T) {
 			client := newTestTable(t)
-			defer deleteTestTable(t, client)
 			_ = insertBaseRepoVulnStatus(t, client)
 
 			t.Run("Non existing registry", func(t *testing.T) {
@@ -213,7 +210,32 @@ func TestRepoVulnStatus(t *testing.T) {
 		})
 
 		t.Run("condition is not matched", func(t *testing.T) {
+			client := newTestTable(t)
+			_ = insertBaseRepoVulnStatus(t, client)
 
+			t.Run("seq is same", func(t *testing.T) {
+				c := genBaseChangeLog()
+				c.StatusSeq = 5
+				updated, err := client.UpdateRepoVulnStatus(c)
+				assert.NoError(t, err)
+				assert.False(t, updated)
+			})
+
+			t.Run("seq is old", func(t *testing.T) {
+				c := genBaseChangeLog()
+				c.StatusSeq = 4
+				updated, err := client.UpdateRepoVulnStatus(c)
+				assert.NoError(t, err)
+				assert.False(t, updated)
+			})
+
+			t.Run("status is not changed", func(t *testing.T) {
+				c := genBaseChangeLog()
+				c.Status = model.VulnStatusNew
+				updated, err := client.UpdateRepoVulnStatus(c)
+				assert.NoError(t, err)
+				assert.False(t, updated)
+			})
 		})
 	})
 }

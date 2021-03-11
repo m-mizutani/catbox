@@ -91,7 +91,7 @@ func (x *DynamoClient) CreateRepoVulnStatus(status *model.RepoVulnStatus) (bool,
 	return true, nil
 }
 
-// UpdateRepoVulnStatus updates Status, Description and sequence if status or description has been changed AND sequence is greater than old one. It returned true as 1st value if updated or false if update was cancelled. Cancel is occurred by not only conditions are not matched but also PK and SK do not exist.
+// UpdateRepoVulnStatus updates Status and sequence if status has been changed AND sequence is greater than old one. It returned true as 1st value if updated or false if update was cancelled. Cancel is occurred by not only conditions are not matched but also PK and SK do not exist.
 func (x *DynamoClient) UpdateRepoVulnStatus(changeLog *model.RepoVulnChangeLog) (bool, error) {
 	changeLogItem := dynamoRecord{
 		PK:  repoVulnChangeLogPK(&changeLog.Image),
@@ -105,10 +105,9 @@ func (x *DynamoClient) UpdateRepoVulnStatus(changeLog *model.RepoVulnChangeLog) 
 	rvsSK := repoVulnStatusSK(&changeLog.RepoVulnEntry)
 	tx := x.db.WriteTx()
 	tx.Update(x.table.Update("pk", rvsPK).Range("sk", rvsSK).
-		If("(doc.'Status' <> ? OR doc.'Description' <> ?)", changeLog.Status, changeLog.Description).
+		If("doc.'Status' <> ?", changeLog.Status).
 		If("doc.'StatusSeq' < ?", changeLog.StatusSeq).
 		Set("doc.'Status'", changeLog.Status).
-		Set("doc.'Description'", changeLog.Description).
 		Set("doc.'StatusSeq'", changeLog.StatusSeq))
 	tx.Put(x.table.Put(changeLogItem))
 	if err := tx.Run(); err != nil {
@@ -118,6 +117,17 @@ func (x *DynamoClient) UpdateRepoVulnStatus(changeLog *model.RepoVulnChangeLog) 
 		return false, golambda.WrapError(err, "dynamo.WriteTx").With("changeLog", changeLog)
 	}
 	return true, nil
+}
+
+// UpdateRepoVulnDescription updates description of RepoVulnStatus
+func (x *DynamoClient) UpdateRepoVulnDescription(img *model.Image, entry *model.RepoVulnEntry, descr string) error {
+	pk := repoVulnStatusPK(img)
+	sk := repoVulnStatusSK(entry)
+	query := x.table.Update("pk", pk).Range("sk", sk).Set("doc.'Description'", descr)
+	if err := query.Run(); err != nil {
+		return golambda.WrapError(err, "dynamo.Update").With("pk", pk).With("sk", sk)
+	}
+	return nil
 }
 
 // GetRepoVulnStatusByRepo retrieves all RepoVulnStatus bound to registry, repo and tag

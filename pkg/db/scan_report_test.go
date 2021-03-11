@@ -37,7 +37,6 @@ func newScanReporTemplate() *model.ScanReport {
 func TestScanReport(t *testing.T) {
 	t.Run("Put and get reports", func(t *testing.T) {
 		client := newTestTable(t)
-		defer deleteTestTable(t, client)
 
 		report1 := newScanReporTemplate()
 		require.NoError(t, client.PutScanReport(report1))

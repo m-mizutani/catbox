@@ -16,15 +16,15 @@ func newTestTable(t *testing.T) interfaces.DBClient {
 	}
 
 	t.Log("Created table name: ", client.(*db.DynamoClient).TableName())
+
+	t.Cleanup(func() {
+		if t.Failed() {
+			return // Failed test table is not deleted
+		}
+
+		if err := client.Close(); err != nil {
+			panic("Failed to delete test table: " + err.Error())
+		}
+	})
 	return client
-}
-
-func deleteTestTable(t *testing.T, client interfaces.DBClient) {
-	if t.Failed() {
-		return // Failed test table is not deleted
-	}
-
-	if err := client.Close(); err != nil {
-		panic("Failed to delete test table: " + err.Error())
-	}
 }

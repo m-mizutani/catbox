@@ -10,23 +10,6 @@ import (
 	"github.com/m-mizutani/golambda"
 )
 
-/*
-
-
-// AssignKeys sets PK (hash key) and SK (range key) from field variables
-func (x *ScanReport) AssignKeys() {
-	if x.ReportID == "" {
-		x.ReportID = uuid.New().String()
-	}
-
-	x.PK = ScanReportPK(x.Registry, x.Repo, x.Tag)
-	x.SK = string(x.ScanType) + "/" + time.Unix(x.ScannedAt, 0).Format("2006-01-02T15:04:05") + "/" + x.ReportID
-	x.PK2 = ScanReportPK2()
-	x.SK2 = ScanReportSK2(x.ReportID)
-}
-
-*/
-
 func scanReportPK(registry, repo, tag string) string {
 	return fmt.Sprintf("report:%s/%s:%s", registry, repo, tag)
 }

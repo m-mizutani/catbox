@@ -30,7 +30,6 @@ func TestScanSequence(t *testing.T) {
 		const loopNum int64 = 20
 
 		client := newTestTable(t)
-		defer deleteTestTable(t, client)
 
 		wg := &sync.WaitGroup{}
 
