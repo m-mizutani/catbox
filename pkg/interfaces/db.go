@@ -12,13 +12,13 @@ type DBClient interface {
 	// RepoVulnStatus
 	CreateRepoVulnStatus(status *model.RepoVulnStatus) (bool, error)
 	UpdateRepoVulnStatus(changeLog *model.RepoVulnChangeLog) (bool, error)
-	UpdateRepoVulnDescription(img *model.Image, entry *model.RepoVulnEntry, descr string) error
-	GetRepoVulnStatusByRepo(img *model.Image) ([]*model.RepoVulnStatus, error)
+	UpdateRepoVulnDescription(img *model.TaggedImage, entry *model.RepoVulnEntry, descr string) error
+	GetRepoVulnStatusByRepo(img *model.TaggedImage) ([]*model.RepoVulnStatus, error)
 	GetRepoVulnStatusByVulnID(vulnID string) ([]*model.RepoVulnStatus, error)
 
 	// RepoVulnChangeLog
-	GetRepoVulnChangeLogs(img *model.Image) ([]*model.RepoVulnChangeLog, error)
-	GetRepoVulnEntryChangeLogs(img *model.Image, entry *model.RepoVulnEntry) ([]*model.RepoVulnChangeLog, error)
+	GetRepoVulnChangeLogs(img *model.TaggedImage) ([]*model.RepoVulnChangeLog, error)
+	GetRepoVulnEntryChangeLogs(img *model.TaggedImage, entry *model.RepoVulnEntry) ([]*model.RepoVulnChangeLog, error)
 
 	// ScanReport
 	PutScanReport(report *model.ScanReport) error

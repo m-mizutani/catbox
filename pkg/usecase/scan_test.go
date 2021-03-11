@@ -87,7 +87,7 @@ func TestTrivyScanImage(t *testing.T) {
 			RequestID:   uuid.New().String(),
 			RequestedBy: "ecr.PushImage",
 			RequestedAt: time.Now().UTC(),
-			Target: model.Image{
+			Target: model.TaggedImage{
 				Registry: "111111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
 				Repo:     "strix",
 				Tag:      "latest",

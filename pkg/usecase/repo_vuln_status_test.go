@@ -2,14 +2,14 @@ package usecase_test
 
 /*
 func TestUpdateRepoVulnStatus(t *testing.T) {
-	baseImg := model.Image{
+	baseImg := model.TaggedImage{
 		Registry: "111111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
 		Repo:     "strix",
 		Tag:      "latest",
 	}
 	testData := []*model.RepoVulnStatus{
 		{
-			Image:        baseImg,
+			TaggedImage:        baseImg,
 			ScanSequence: 8,
 			VulnID:       "CVE-2020-27350",
 			VulnTitle:    "",
@@ -22,7 +22,7 @@ func TestUpdateRepoVulnStatus(t *testing.T) {
 			PkgName:      "apt",
 		},
 		{
-			Image:        baseImg,
+			TaggedImage:        baseImg,
 			ScanSequence: 9,
 			VulnID:       "CVE-2020-27350",
 			VulnTitle:    "",
@@ -36,7 +36,7 @@ func TestUpdateRepoVulnStatus(t *testing.T) {
 		},
 
 		{
-			Image:        baseImg,
+			TaggedImage:        baseImg,
 			ScanSequence: 9,
 			VulnID:       "CVE-2020-0001",
 			VulnTitle:    "Should Fixed Vuln",

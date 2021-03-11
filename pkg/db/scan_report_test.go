@@ -10,7 +10,7 @@ import (
 
 func newScanReporTemplate() *model.ScanReport {
 	return &model.ScanReport{
-		Image: model.Image{
+		TaggedImage: model.TaggedImage{
 			Registry: "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
 			Repo:     "star",
 			Tag:      "main",

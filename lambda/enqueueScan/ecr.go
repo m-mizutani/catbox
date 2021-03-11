@@ -46,7 +46,7 @@ func handleECREvent(ctrl *controller.Controller, event cloudWatchEvent) error {
 			return err
 		}
 
-		target := &model.Image{
+		target := &model.TaggedImage{
 			Registry: registry,
 			Repo:     repo,
 			Tag:      event.Detail.ResponseElements.Image.ImageID.ImageTag,

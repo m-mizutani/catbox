@@ -14,7 +14,7 @@ const (
 	repoVulnChangeLogKeyPrefix  = "repo_vuln_changelog:"
 )
 
-func repoVulnStatusPK(img *model.Image) string {
+func repoVulnStatusPK(img *model.TaggedImage) string {
 	return repoVulnStatusKeyPrefix + img.RegistryRepoTag()
 }
 
@@ -27,10 +27,10 @@ func repoVulnStatusPK2(vulnID string) string {
 }
 
 func repoVulnStatusSK2(status *model.RepoVulnStatus) string {
-	return status.Image.RegistryRepoTag() + ":" + status.RepoVulnEntry.TypeKey()
+	return status.TaggedImage.RegistryRepoTag() + ":" + status.RepoVulnEntry.TypeKey()
 }
 
-func repoVulnChangeLogPK(img *model.Image) string {
+func repoVulnChangeLogPK(img *model.TaggedImage) string {
 	return repoVulnChangeLogKeyPrefix + img.RegistryRepoTag()
 }
 
@@ -46,30 +46,30 @@ func repoVulnChangeLogPK2(vulnID string) string {
 	return repoVulnChangeLogKeyPrefix + vulnID
 }
 
-func repoVulnChangeLogSK2(img *model.Image, entry *model.RepoVulnEntry, seq int64) string {
+func repoVulnChangeLogSK2(img *model.TaggedImage, entry *model.RepoVulnEntry, seq int64) string {
 	return fmt.Sprintf("%s:%016d", repoVulnChangeLogSK2Prefix(img, entry), seq)
 }
 
-func repoVulnChangeLogSK2Prefix(img *model.Image, entry *model.RepoVulnEntry) string {
+func repoVulnChangeLogSK2Prefix(img *model.TaggedImage, entry *model.RepoVulnEntry) string {
 	return img.RegistryRepoTag() + ":" + entry.TypeKey() + ":"
 }
 
 // CreateRepoVulnStatus puts only new RepoVulnStatus. If an item already exists, skip it. It returns true if inserted
 func (x *DynamoClient) CreateRepoVulnStatus(status *model.RepoVulnStatus) (bool, error) {
 	vulnStatItem := dynamoRecord{
-		PK:  repoVulnStatusPK(&status.Image),
+		PK:  repoVulnStatusPK(&status.TaggedImage),
 		SK:  repoVulnStatusSK(&status.RepoVulnEntry),
 		PK2: repoVulnStatusPK2(status.VulnID),
 		SK2: repoVulnStatusSK2(status),
 		Doc: status,
 	}
 	changeLogItem := dynamoRecord{
-		PK:  repoVulnChangeLogPK(&status.Image),
+		PK:  repoVulnChangeLogPK(&status.TaggedImage),
 		SK:  repoVulnChangeLogSK(&status.RepoVulnEntry, status.StatusSeq),
 		PK2: repoVulnChangeLogPK2(status.VulnID),
-		SK2: repoVulnChangeLogSK2(&status.Image, &status.RepoVulnEntry, status.StatusSeq),
+		SK2: repoVulnChangeLogSK2(&status.TaggedImage, &status.RepoVulnEntry, status.StatusSeq),
 		Doc: model.RepoVulnChangeLog{
-			Image:         status.Image,
+			TaggedImage:   status.TaggedImage,
 			RepoVulnEntry: status.RepoVulnEntry,
 			Status:        model.VulnStatusNew,
 			UpdatedAt:     status.UpdatedAt,
@@ -94,14 +94,14 @@ func (x *DynamoClient) CreateRepoVulnStatus(status *model.RepoVulnStatus) (bool,
 // UpdateRepoVulnStatus updates Status and sequence if status has been changed AND sequence is greater than old one. It returned true as 1st value if updated or false if update was cancelled. Cancel is occurred by not only conditions are not matched but also PK and SK do not exist.
 func (x *DynamoClient) UpdateRepoVulnStatus(changeLog *model.RepoVulnChangeLog) (bool, error) {
 	changeLogItem := dynamoRecord{
-		PK:  repoVulnChangeLogPK(&changeLog.Image),
+		PK:  repoVulnChangeLogPK(&changeLog.TaggedImage),
 		SK:  repoVulnChangeLogSK(&changeLog.RepoVulnEntry, changeLog.StatusSeq),
 		PK2: repoVulnChangeLogPK2(changeLog.VulnID),
-		SK2: repoVulnChangeLogSK2(&changeLog.Image, &changeLog.RepoVulnEntry, changeLog.StatusSeq),
+		SK2: repoVulnChangeLogSK2(&changeLog.TaggedImage, &changeLog.RepoVulnEntry, changeLog.StatusSeq),
 		Doc: changeLog,
 	}
 
-	rvsPK := repoVulnStatusPK(&changeLog.Image)
+	rvsPK := repoVulnStatusPK(&changeLog.TaggedImage)
 	rvsSK := repoVulnStatusSK(&changeLog.RepoVulnEntry)
 	tx := x.db.WriteTx()
 	tx.Update(x.table.Update("pk", rvsPK).Range("sk", rvsSK).
@@ -120,7 +120,7 @@ func (x *DynamoClient) UpdateRepoVulnStatus(changeLog *model.RepoVulnChangeLog) 
 }
 
 // UpdateRepoVulnDescription updates description of RepoVulnStatus
-func (x *DynamoClient) UpdateRepoVulnDescription(img *model.Image, entry *model.RepoVulnEntry, descr string) error {
+func (x *DynamoClient) UpdateRepoVulnDescription(img *model.TaggedImage, entry *model.RepoVulnEntry, descr string) error {
 	pk := repoVulnStatusPK(img)
 	sk := repoVulnStatusSK(entry)
 	query := x.table.Update("pk", pk).Range("sk", sk).Set("doc.'Description'", descr)
@@ -131,7 +131,7 @@ func (x *DynamoClient) UpdateRepoVulnDescription(img *model.Image, entry *model.
 }
 
 // GetRepoVulnStatusByRepo retrieves all RepoVulnStatus bound to registry, repo and tag
-func (x *DynamoClient) GetRepoVulnStatusByRepo(img *model.Image) ([]*model.RepoVulnStatus, error) {
+func (x *DynamoClient) GetRepoVulnStatusByRepo(img *model.TaggedImage) ([]*model.RepoVulnStatus, error) {
 	pk := repoVulnStatusPK(img)
 
 	var records []*dynamoRecord
@@ -168,7 +168,7 @@ func (x *DynamoClient) GetRepoVulnStatusByVulnID(vulnID string) ([]*model.RepoVu
 	return resp, nil
 }
 
-func (x *DynamoClient) GetRepoVulnChangeLogs(img *model.Image) ([]*model.RepoVulnChangeLog, error) {
+func (x *DynamoClient) GetRepoVulnChangeLogs(img *model.TaggedImage) ([]*model.RepoVulnChangeLog, error) {
 	pk := repoVulnChangeLogPK(img)
 	var records []*dynamoRecord
 	if err := x.table.Get("pk", pk).All(&records); err != nil {
@@ -185,7 +185,7 @@ func (x *DynamoClient) GetRepoVulnChangeLogs(img *model.Image) ([]*model.RepoVul
 	return resp, nil
 }
 
-func (x *DynamoClient) GetRepoVulnEntryChangeLogs(img *model.Image, entry *model.RepoVulnEntry) ([]*model.RepoVulnChangeLog, error) {
+func (x *DynamoClient) GetRepoVulnEntryChangeLogs(img *model.TaggedImage, entry *model.RepoVulnEntry) ([]*model.RepoVulnChangeLog, error) {
 	pk := repoVulnChangeLogPK(img)
 	skPrefix := repoVulnChangeLogSKPrefix(entry)
 

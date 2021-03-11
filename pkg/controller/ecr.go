@@ -159,7 +159,7 @@ func (x *Controller) GetRegistryAPIToken(registry string) (string, error) {
 }
 
 // GetImageManifest returns manifest of a target image. Use digest
-func (x *Controller) GetImageManifest(target *model.Image, authToken string) (*ImageManifestResult, error) {
+func (x *Controller) GetImageManifest(target *model.TaggedImage, authToken string) (*ImageManifestResult, error) {
 	reference := target.Digest
 	if reference == "" {
 		reference = target.Tag
@@ -217,7 +217,7 @@ func (x *Controller) GetImageManifest(target *model.Image, authToken string) (*I
 	}
 }
 
-func (x *Controller) GetImageEnv(manifest *ImageManifestResult, target *model.Image, authToken string) ([]string, error) {
+func (x *Controller) GetImageEnv(manifest *ImageManifestResult, target *model.TaggedImage, authToken string) ([]string, error) {
 	url := fmt.Sprintf("https://%s/v2/%s/blobs/%s", target.Registry, target.Repo, manifest.Config.Digest)
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -247,14 +247,14 @@ func (x *Controller) GetImageEnv(manifest *ImageManifestResult, target *model.Im
 	return config.Config.Env, nil
 }
 
-func (x *Controller) GetRepositoryList(region string) ([]*model.Image, error) {
+func (x *Controller) GetRepositoryList(region string) ([]*model.TaggedImage, error) {
 	client, err := x.adaptors.NewECR(region)
 	if err != nil {
 		return nil, golambda.WrapError(err).With("region", region)
 	}
 
 	input := &ecr.DescribeRepositoriesInput{}
-	var images []*model.Image
+	var images []*model.TaggedImage
 
 	client.DescribeRepositoriesPages(input, func(out *ecr.DescribeRepositoriesOutput, _ bool) bool {
 		for _, repo := range out.Repositories {

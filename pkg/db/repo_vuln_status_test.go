@@ -11,7 +11,7 @@ import (
 
 func newRepoVulnStatusTemplate() *model.RepoVulnStatus {
 	return &model.RepoVulnStatus{
-		Image: model.Image{
+		TaggedImage: model.TaggedImage{
 			Registry: "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
 			Repo:     "test-image",
 			Tag:      "good-tag",
@@ -63,7 +63,7 @@ func TestRepoVulnStatus(t *testing.T) {
 		s := insertBaseRepoVulnStatus(t, client)
 
 		t.Run("And get them by repo", func(t *testing.T) {
-			img := model.Image{
+			img := model.TaggedImage{
 				Registry: "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
 				Repo:     "test-image",
 				Tag:      "good-tag",
@@ -87,7 +87,7 @@ func TestRepoVulnStatus(t *testing.T) {
 	t.Run("Update RepoStatus", func(t *testing.T) {
 		genBaseChangeLog := func() *model.RepoVulnChangeLog {
 			return &model.RepoVulnChangeLog{
-				Image: model.Image{
+				TaggedImage: model.TaggedImage{
 					Registry: "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
 					Repo:     "test-image",
 					Tag:      "good-tag",
@@ -110,13 +110,13 @@ func TestRepoVulnStatus(t *testing.T) {
 
 			t.Run("Normal case", func(t *testing.T) {
 				c := genBaseChangeLog()
-				before1, err := client.GetRepoVulnChangeLogs(&c.Image)
+				before1, err := client.GetRepoVulnChangeLogs(&c.TaggedImage)
 				require.NoError(t, err)
 				assert.Equal(t, 2, len(before1))
 				assert.Equal(t, model.VulnStatusNew, before1[0].Status)
 				assert.Equal(t, model.VulnStatusNew, before1[1].Status)
 
-				before2, err := client.GetRepoVulnEntryChangeLogs(&c.Image, &c.RepoVulnEntry)
+				before2, err := client.GetRepoVulnEntryChangeLogs(&c.TaggedImage, &c.RepoVulnEntry)
 				require.NoError(t, err)
 				assert.Equal(t, 1, len(before2))
 				assert.Equal(t, model.VulnStatusNew, before2[0].Status)
@@ -128,11 +128,11 @@ func TestRepoVulnStatus(t *testing.T) {
 				assert.True(t, updated)
 
 				// Check results of update
-				after1, err := client.GetRepoVulnChangeLogs(&c.Image)
+				after1, err := client.GetRepoVulnChangeLogs(&c.TaggedImage)
 				require.NoError(t, err)
 				assert.Equal(t, 3, len(after1))
 
-				after2, err := client.GetRepoVulnEntryChangeLogs(&c.Image, &c.RepoVulnEntry)
+				after2, err := client.GetRepoVulnEntryChangeLogs(&c.TaggedImage, &c.RepoVulnEntry)
 				require.NoError(t, err)
 				assert.Equal(t, 2, len(after2))
 				assert.Equal(t, model.VulnStatusNew, after2[0].Status)
@@ -148,7 +148,7 @@ func TestRepoVulnStatus(t *testing.T) {
 
 			t.Run("Non existing registry", func(t *testing.T) {
 				c := genBaseChangeLog()
-				img := &model.Image{
+				img := &model.TaggedImage{
 					Registry: "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
 					Repo:     "test-image",
 					Tag:      "good-tag",

@@ -9,7 +9,7 @@ type ScanRequestMessage struct {
 	RequestID   string
 	RequestedBy string
 	RequestedAt time.Time
-	Target      Image
+	Target      TaggedImage
 	TargetMeta  ImageMeta
 
 	// Output to

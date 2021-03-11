@@ -8,7 +8,7 @@ import (
 )
 
 func TestImage(t *testing.T) {
-	img := model.Image{
+	img := model.TaggedImage{
 		Registry: "test.registry.com",
 		Repo:     "blue",
 		Tag:      "magic",

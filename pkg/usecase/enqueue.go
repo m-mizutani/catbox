@@ -11,7 +11,7 @@ import (
 )
 
 // EnqueueScanRequest retrieves layer digests and environment variables of a target image and sends them to SQS as scan request message.
-func EnqueueScanRequest(ctrl *controller.Controller, target *model.Image, requester string) error {
+func EnqueueScanRequest(ctrl *controller.Controller, target *model.TaggedImage, requester string) error {
 	token, err := ctrl.GetRegistryAPIToken(target.Registry)
 	if err != nil {
 		return golambda.WrapError(err).With("target", target)

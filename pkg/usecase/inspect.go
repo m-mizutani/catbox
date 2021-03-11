@@ -88,7 +88,7 @@ func UpdateRepoVulnStatus(ctrl *controller.Controller, originals []*model.RepoVu
 	var updated []*model.RepoVulnStatus
 	for _, status := range originals {
 		changeLog := &model.RepoVulnChangeLog{
-			Image:         status.Image,
+			TaggedImage:   status.Image,
 			RepoVulnEntry: status.RepoVulnEntry,
 			Status:        updateTo,
 			UpdatedAt:     ts,
@@ -130,7 +130,7 @@ func reportToRepoVulnStatusMap(ctrl *controller.Controller, report *model.ScanRe
 	for _, source := range results {
 		for _, vuln := range source.Vulnerabilities {
 			statuses = append(statuses, &model.RepoVulnStatus{
-				Image: report.Image,
+				TaggedImage: report.Image,
 				RepoVulnEntry: model.RepoVulnEntry{
 					VulnID:    vuln.VulnerabilityID,
 					VulnType:  model.VulnPkg,

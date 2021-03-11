@@ -94,10 +94,12 @@ func newControllerForInspectTest(t *testing.T) (*controller.Controller, *mockSet
 
 	// -------------------------------
 	// insert base data
+
+	// Scan report
 	report := &model.ScanReport{
 		ReportID:  "report-id-1", // Usually ReportID should not be filled, but allow it for testing
 		StatusSeq: 10,
-		Image: model.Image{
+		TaggedImage: model.TaggedImage{
 			Registry: "111111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
 			Repo:     "strix",
 			Tag:      "latest",
@@ -114,14 +116,12 @@ func newControllerForInspectTest(t *testing.T) (*controller.Controller, *mockSet
 			Key:    "path/to/my/report.json.gz",
 		},
 	}
+	require.NoError(t, mock.dbClient.PutScanReport(report))
 
 	// Trivy scan result
 	trivyResultData, err := ioutil.ReadFile("../testdata/trivy_output_sample1.json")
 	require.NoError(t, err)
 	mock.s3.saveObject("report-bucket", "path/to/my/report.json.gz", trivyResultData)
-
-	// Save report data
-	require.NoError(t, mock.dbClient.PutScanReport(report))
 
 	return ctrl, mock
 }

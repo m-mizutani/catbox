@@ -118,7 +118,7 @@ func (x *Controller) HasTrivyDB(cacheDir string) bool {
 }
 
 // InvokeTrivyScan setup DB invokes trivy command by exec.Command
-func (x *Controller) InvokeTrivyScan(img model.Image, cacheDir string) ([]report.Result, error) {
+func (x *Controller) InvokeTrivyScan(img model.TaggedImage, cacheDir string) ([]report.Result, error) {
 	imagePath := img.RegistryRepoTag()
 
 	tmpName, err := x.adaptors.TempFile("", "output*.json")
