@@ -30,6 +30,9 @@ type dynamoRecord struct {
 	Doc interface{} `dynamo:"doc"`
 }
 
+func (x *dynamoRecord) HashKey() interface{}  { return x.PK }
+func (x *dynamoRecord) RangeKey() interface{} { return x.SK }
+
 type dynamoMetaSequence struct {
 	PK  string `dynamo:"pk,hash"`
 	SK  string `dynamo:"sk,range"`

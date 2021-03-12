@@ -28,6 +28,10 @@ type DBClient interface {
 	// ImageLayerIndex
 	PutImageLayerDigest(layerDigest *model.ImageLayerIndex) error
 	LookupImageLayerDigest(digest string) ([]*model.ImageLayerIndex, error)
+
+	// VulnInfo
+	PutVulnInfoBatch(vulnInfoSet []*model.VulnInfo) ([]*model.VulnInfo, error)
+	GetVulnInfoBatch(vulnIDs []string) ([]*model.VulnInfo, error)
 }
 
 type DBClientFactory func(region, tableName string) (DBClient, error)

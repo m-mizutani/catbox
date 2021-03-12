@@ -20,7 +20,7 @@
 
 ### Vulnerability Info
 - PK: `vuln_info:{vuln_id}`
-- SK: `{pkg_type}/{pkg_name}`
+- SK: `-`
 - PK2: `list:vuln_info`
 - SK2: `{created_at}/{vuln_id}`
 

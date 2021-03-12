@@ -61,6 +61,7 @@ func InspectScanReport(ctrl *controller.Controller, msg *model.InspectRequestMes
 
 // InsertRepoVulnStatus adds new RepoVulnStatus set
 func InsertRepoVulnStatus(ctrl *controller.Controller, newStatuses []*model.RepoVulnStatus) error {
+
 	var inserted []*model.RepoVulnStatus
 	for _, status := range newStatuses {
 		done, err := ctrl.DB().CreateRepoVulnStatus(status)
