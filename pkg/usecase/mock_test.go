@@ -19,7 +19,6 @@ import (
 type (
 	mockS3 struct {
 		regions        map[string]struct{}
-		getSeq         int
 		getObjectInput []*s3.GetObjectInput
 		putObjectInput []*s3.PutObjectInput
 

@@ -1,6 +1,7 @@
 package usecase_test
 
 import (
+	"encoding/json"
 	"io"
 	"io/ioutil"
 	"os"
@@ -28,13 +29,48 @@ func TestInspect(t *testing.T) {
 	})
 
 	t.Run("Normal case", func(t *testing.T) {
-		ctrl, _ := newControllerForInspectTest(t)
+		ctrl, mock := newControllerForInspectTest(t)
 		req := &model.InspectRequestMessage{
 			ReportID: "report-id-1",
 		}
 
 		// Run usecase
 		assert.NoError(t, usecase.InspectScanReport(ctrl, req))
+
+		// Check outputs
+		t.Run("Published change message to SNS", func(t *testing.T) {
+			require.Equal(t, 1, len(mock.sns.input))
+			var msg model.ChangeMessage
+			require.NoError(t, json.Unmarshal([]byte(*mock.sns.input[0].Message), &msg))
+			require.Equal(t, 4, len(msg.UpdatedStatus))
+			vulnIDs := make([]string, len(msg.UpdatedStatus))
+			for i := range vulnIDs {
+				vulnIDs[i] = msg.UpdatedStatus[i].VulnID
+			}
+			assert.Contains(t, vulnIDs, "CVE-2020-27350")
+			assert.Contains(t, vulnIDs, "CVE-2017-15131")
+			assert.Contains(t, vulnIDs, "CVE-2020-7662")
+			assert.Contains(t, vulnIDs, "GHSA-p9pc-299p-vxgp")
+		})
+
+		t.Run("Added new RepoVulnStatus", func(t *testing.T) {
+			stats, err := mock.dbClient.GetRepoVulnStatusByRepo(&model.TaggedImage{
+				Registry: "111111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
+				Repo:     "strix",
+				Tag:      "latest",
+			})
+			require.NoError(t, err)
+			assert.Equal(t, 4, len(stats))
+
+			vulnIDs := make([]string, len(stats))
+			for i := range vulnIDs {
+				vulnIDs[i] = stats[i].VulnID
+			}
+			assert.Contains(t, vulnIDs, "CVE-2020-27350")
+			assert.Contains(t, vulnIDs, "CVE-2017-15131")
+			assert.Contains(t, vulnIDs, "CVE-2020-7662")
+			assert.Contains(t, vulnIDs, "GHSA-p9pc-299p-vxgp")
+		})
 	})
 }
 

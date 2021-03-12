@@ -66,6 +66,22 @@ func TestTrivyScanImage(t *testing.T) {
 			require.NoError(t, json.Unmarshal([]byte(*mock.sqs.input[0].MessageBody), &req))
 			assert.NotEmpty(t, req.ReportID)
 		})
+
+		t.Run("accessed to registry with auth token by ecr.GetAuthorizationToken", func(t *testing.T) {
+			require.Equal(t, 2, len(mock.http.requests))
+
+			req1 := mock.http.requests[0]
+			assert.Equal(t, "GET", req1.Method)
+			assert.Equal(t, "https://111111111111.dkr.ecr.ap-northeast-1.amazonaws.com/v2/strix/manifests/latest", req1.URL.String())
+			assert.Equal(t, "Basic fake_auth_token", req1.Header.Get("Authorization"))
+			assert.Equal(t, "*/*", req1.Header.Get("Accept"))
+
+			req2 := mock.http.requests[1]
+			assert.Equal(t, "GET", req2.Method)
+			assert.Equal(t, "https://111111111111.dkr.ecr.ap-northeast-1.amazonaws.com/v2/strix/blobs/sha256:b5b2b2c507a0944348e0303114d8d93aaaa081732b86451d9bce1f432a537bc7", req2.URL.String())
+			assert.Equal(t, "Basic fake_auth_token", req2.Header.Get("Authorization"))
+			assert.Equal(t, "application/vnd.docker.distribution.manifest.v2+json", req2.Header.Get("Accept"))
+		})
 	})
 }
 

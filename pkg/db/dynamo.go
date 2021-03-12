@@ -16,8 +16,6 @@ import (
 	"github.com/m-mizutani/golambda"
 )
 
-var logger = golambda.Logger
-
 const (
 	dynamoGSIName = "secondary"
 )
