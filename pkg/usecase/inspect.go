@@ -29,7 +29,7 @@ func InspectScanReport(ctrl *controller.Controller, msg *model.InspectRequestMes
 		return golambda.WrapError(ErrReportNotFound).With("msg", msg)
 	}
 
-	img := scanReport.Image
+	img := scanReport.TaggedImage
 	if img.Tag != "latest" { // TODO: It will be replaced to check repoConfig
 		return nil
 	}
@@ -39,7 +39,7 @@ func InspectScanReport(ctrl *controller.Controller, msg *model.InspectRequestMes
 		return err
 	}
 
-	beforeStatus, err := ctrl.DB().GetRepoVulnStatusByRepo(&scanReport.Image)
+	beforeStatus, err := ctrl.DB().GetRepoVulnStatusByRepo(&img)
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func UpdateRepoVulnStatus(ctrl *controller.Controller, originals []*model.RepoVu
 	var updated []*model.RepoVulnStatus
 	for _, status := range originals {
 		changeLog := &model.RepoVulnChangeLog{
-			TaggedImage:   status.Image,
+			TaggedImage:   status.TaggedImage,
 			RepoVulnEntry: status.RepoVulnEntry,
 			Status:        updateTo,
 			UpdatedAt:     ts,
@@ -130,7 +130,7 @@ func reportToRepoVulnStatusMap(ctrl *controller.Controller, report *model.ScanRe
 	for _, source := range results {
 		for _, vuln := range source.Vulnerabilities {
 			statuses = append(statuses, &model.RepoVulnStatus{
-				TaggedImage: report.Image,
+				TaggedImage: report.TaggedImage,
 				RepoVulnEntry: model.RepoVulnEntry{
 					VulnID:    vuln.VulnerabilityID,
 					VulnType:  model.VulnPkg,

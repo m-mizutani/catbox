@@ -14,7 +14,6 @@ func newScanReporTemplate() *model.ScanReport {
 			Registry: "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
 			Repo:     "star",
 			Tag:      "main",
-			Digest:   "12345678",
 		},
 		ImageMeta: model.ImageMeta{
 			LayerDigests: make([]string, 0),

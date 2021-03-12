@@ -158,11 +158,11 @@ func (x *Controller) GetRegistryAPIToken(registry string) (string, error) {
 	return aws.StringValue(output.AuthorizationData[0].AuthorizationToken), nil
 }
 
-// GetImageManifest returns manifest of a target image. Use digest
-func (x *Controller) GetImageManifest(target *model.TaggedImage, authToken string) (*ImageManifestResult, error) {
+// GetImageManifest returns manifest of a target image (registry + repo + digest). Use tag as reference if missing digest
+func (x *Controller) GetImageManifest(target *model.Image, tag string, authToken string) (*ImageManifestResult, error) {
 	reference := target.Digest
 	if reference == "" {
-		reference = target.Tag
+		reference = tag
 	}
 
 	url := fmt.Sprintf("https://%s/v2/%s/manifests/%s", target.Registry, target.Repo, reference)
@@ -200,10 +200,9 @@ func (x *Controller) GetImageManifest(target *model.TaggedImage, authToken strin
 		for _, m := range manifest.Manifests {
 			if m.Platform.Architecture == "amd64" {
 				newTarget := target
-				newTarget.Tag = ""
 				newTarget.Digest = m.Digest
 
-				return x.GetImageManifest(newTarget, authToken)
+				return x.GetImageManifest(newTarget, "", authToken)
 			}
 
 			logger.With("manifest", m).Warn("Unsupported platform")

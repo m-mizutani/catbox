@@ -27,6 +27,11 @@ func TrivyScanImage(ctrl *controller.Controller, req *model.ScanRequestMessage) 
 	}
 	scannedAt := time.Now().UTC()
 
+	meta, err := GetImageMetaData(ctrl, &req.Target)
+	if err != nil {
+		return err
+	}
+
 	logger.With("len(results)", len(trivyResults)).With("req", req).Info("Scanned")
 	logger.With("results", trivyResults).Debug("Scanned results")
 
@@ -38,7 +43,7 @@ func TrivyScanImage(ctrl *controller.Controller, req *model.ScanRequestMessage) 
 	report := &model.ScanReport{
 		StatusSeq:   statusSeq,
 		TaggedImage: req.Target,
-		ImageMeta:   req.TargetMeta,
+		ImageMeta:   *meta,
 		ScannedBy:   model.ScannerTrivy,
 		RequestedAt: req.RequestedAt.UTC().Unix(),
 		RequestedBy: req.RequestedBy,

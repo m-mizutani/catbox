@@ -47,7 +47,7 @@ func repoVulnChangeLogPK2(vulnID string) string {
 }
 
 func repoVulnChangeLogSK2(img *model.TaggedImage, entry *model.RepoVulnEntry, seq int64) string {
-	return fmt.Sprintf("%s:%016d", repoVulnChangeLogSK2Prefix(img, entry), seq)
+	return fmt.Sprintf("%s:%016X", repoVulnChangeLogSK2Prefix(img, entry), seq)
 }
 
 func repoVulnChangeLogSK2Prefix(img *model.TaggedImage, entry *model.RepoVulnEntry) string {

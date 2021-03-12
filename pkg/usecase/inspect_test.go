@@ -28,7 +28,7 @@ func TestInspect(t *testing.T) {
 	})
 
 	t.Run("Normal case", func(t *testing.T) {
-		ctrl, mock := newControllerForInspectTest(t)
+		ctrl, _ := newControllerForInspectTest(t)
 		req := &model.InspectRequestMessage{
 			ReportID: "report-id-1",
 		}
@@ -50,6 +50,7 @@ func newControllerForInspectTest(t *testing.T) (*controller.Controller, *mockSet
 			S3Prefix:        "testing/",
 			ScanQueueURL:    "https://sqs.us-east-2.amazonaws.com/123456789012/scan-queue",
 			InspectQueueURL: "https://sqs.us-east-2.amazonaws.com/123456789012/inspect-queue",
+			ChangeTopicARN:  "arn:aws:sns:us-east-1:111122223333:my-topic",
 		},
 	}
 
@@ -62,6 +63,7 @@ func newControllerForInspectTest(t *testing.T) (*controller.Controller, *mockSet
 			return &mock.s3, nil
 		},
 		NewSQS:   func(region string) (interfaces.SQSClient, error) { return &mock.sqs, nil },
+		NewSNS:   func(region string) (interfaces.SNSClient, error) { return &mock.sns, nil },
 		MkdirAll: func(path string, perm os.FileMode) error { return nil },
 		Exec:     func(s1 string, s2 ...string) ([]byte, error) { return nil, nil },
 		Create: func(s string) (io.WriteCloser, error) {

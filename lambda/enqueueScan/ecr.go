@@ -50,7 +50,6 @@ func handleECREvent(ctrl *controller.Controller, event cloudWatchEvent) error {
 			Registry: registry,
 			Repo:     repo,
 			Tag:      event.Detail.ResponseElements.Image.ImageID.ImageTag,
-			Digest:   event.Detail.ResponseElements.Image.ImageID.ImageDigest,
 		}
 
 		if err := usecase.EnqueueScanRequest(ctrl, target, "ecr.PutImage"); err != nil {

@@ -6,8 +6,10 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/aws/aws-sdk-go/service/sqs"
@@ -29,11 +31,22 @@ type (
 	mockSNS struct {
 		input []*sns.PublishInput
 	}
+	mockECR struct {
+		getTokenInput  []*ecr.GetAuthorizationTokenInput
+		getTokenOutput []*ecr.GetAuthorizationTokenOutput
+		interfaces.ECRClient
+	}
 	bufCloser struct{ bytes.Buffer }
-
+	mockHTTP  struct {
+		requests  []*http.Request
+		responses []*http.Response
+	}
 	mockSet struct {
 		s3       mockS3
 		sqs      mockSQS
+		sns      mockSNS
+		ecr      mockECR
+		http     mockHTTP
 		buffers  []*bufCloser
 		dbClient interfaces.DBClient
 	}
@@ -98,4 +111,16 @@ func (x *mockSNS) Publish(input *sns.PublishInput) (*sns.PublishOutput, error) {
 	return &sns.PublishOutput{}, nil
 }
 
+func (x *mockECR) GetAuthorizationToken(input *ecr.GetAuthorizationTokenInput) (*ecr.GetAuthorizationTokenOutput, error) {
+	output := x.getTokenOutput[len(x.getTokenInput)]
+	x.getTokenInput = append(x.getTokenInput, input)
+	return output, nil
+}
+
 func (x *bufCloser) Close() error { return nil }
+
+func (x *mockHTTP) Do(req *http.Request) (*http.Response, error) {
+	resp := x.responses[len(x.requests)]
+	x.requests = append(x.requests, req)
+	return resp, nil
+}

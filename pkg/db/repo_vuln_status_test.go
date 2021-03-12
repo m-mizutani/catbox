@@ -15,7 +15,6 @@ func newRepoVulnStatusTemplate() *model.RepoVulnStatus {
 			Registry: "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
 			Repo:     "test-image",
 			Tag:      "good-tag",
-			Digest:   "12345678",
 		},
 
 		RepoVulnEntry: model.RepoVulnEntry{

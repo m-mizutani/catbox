@@ -8,13 +8,17 @@ import (
 )
 
 func TestImage(t *testing.T) {
-	img := model.TaggedImage{
+	tagImg := model.TaggedImage{
 		Registry: "test.registry.com",
 		Repo:     "blue",
 		Tag:      "magic",
+	}
+	assert.Equal(t, "test.registry.com/blue:magic", tagImg.RegistryRepoTag())
+
+	img := model.Image{
+		Registry: "test.registry.com",
+		Repo:     "blue",
 		Digest:   "beefcafe",
 	}
-
-	assert.Equal(t, "test.registry.com/blue:magic", img.RegistryRepoTag())
 	assert.Equal(t, "test.registry.com/blue:beefcafe", img.RegistryRepoDigest())
 }

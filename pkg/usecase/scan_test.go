@@ -4,11 +4,15 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/google/uuid"
 	"github.com/m-mizutani/catbox/pkg/controller"
 	"github.com/m-mizutani/catbox/pkg/db"
@@ -18,63 +22,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func newControllerForTrivyScanImageTest(t *testing.T) (*controller.Controller, *mockSet) {
-	mock := &mockSet{}
-
-	ctrl := &controller.Controller{
-		Config: controller.Config{
-			AwsRegion:       "us-east-0",
-			TableName:       "trivy-scan-test",
-			S3Region:        "ap-northeast-0",
-			S3Bucket:        "example-bucket",
-			S3Prefix:        "testing/",
-			ScanQueueURL:    "https://sqs.us-east-2.amazonaws.com/123456789012/scan-queue",
-			InspectQueueURL: "https://sqs.us-east-2.amazonaws.com/123456789012/inspect-queue",
-		},
-	}
-
-	ctrl.InjectAdaptors(controller.Adaptors{
-		NewS3: func(region string) (interfaces.S3Client, error) {
-			if mock.s3.regions == nil {
-				mock.s3.regions = make(map[string]struct{})
-			}
-			mock.s3.regions[region] = struct{}{}
-			return &mock.s3, nil
-		},
-		NewSQS:   func(region string) (interfaces.SQSClient, error) { return &mock.sqs, nil },
-		MkdirAll: func(path string, perm os.FileMode) error { return nil },
-		Exec:     func(s1 string, s2 ...string) ([]byte, error) { return nil, nil },
-		Create: func(s string) (io.WriteCloser, error) {
-			buf := &bufCloser{}
-			mock.buffers = append(mock.buffers, buf)
-			return buf, nil
-		},
-
-		NewDBClient: func(region, tableName string) (interfaces.DBClient, error) {
-			var err error
-			mock.dbClient, err = db.NewDynamoClientLocal(region, tableName)
-			return mock.dbClient, err
-		},
-		ReadFile: func(filename string) ([]byte, error) {
-			return ioutil.ReadFile(path.Join("..", "testdata", "trivy_output_sample1.json"))
-		},
-		TempFile: interfaces.DefaultTempFileFunc,
-	})
-
-	dbClient := ctrl.DB()
-	t.Logf("dynamo table name: %s", dbClient.(*db.DynamoClient).TableName())
-
-	t.Cleanup(func() {
-		if !t.Failed() {
-			if err := ctrl.DB().Close(); err != nil {
-				t.Fatal("Can not close DB: ", err)
-			}
-		}
-	})
-
-	return ctrl, mock
-}
 
 func TestTrivyScanImage(t *testing.T) {
 	t.Run("normal case", func(t *testing.T) {
@@ -120,4 +67,128 @@ func TestTrivyScanImage(t *testing.T) {
 			assert.NotEmpty(t, req.ReportID)
 		})
 	})
+}
+
+func newControllerForTrivyScanImageTest(t *testing.T) (*controller.Controller, *mockSet) {
+	mock := &mockSet{}
+
+	ctrl := &controller.Controller{
+		Config: controller.Config{
+			AwsRegion:       "us-east-0",
+			TableName:       "trivy-scan-test",
+			S3Region:        "ap-northeast-0",
+			S3Bucket:        "example-bucket",
+			S3Prefix:        "testing/",
+			ScanQueueURL:    "https://sqs.us-east-2.amazonaws.com/123456789012/scan-queue",
+			InspectQueueURL: "https://sqs.us-east-2.amazonaws.com/123456789012/inspect-queue",
+		},
+	}
+
+	ctrl.InjectAdaptors(controller.Adaptors{
+		NewS3: func(region string) (interfaces.S3Client, error) {
+			if mock.s3.regions == nil {
+				mock.s3.regions = make(map[string]struct{})
+			}
+			mock.s3.regions[region] = struct{}{}
+			return &mock.s3, nil
+		},
+		NewSQS:   func(region string) (interfaces.SQSClient, error) { return &mock.sqs, nil },
+		NewECR:   func(region string) (interfaces.ECRClient, error) { return &mock.ecr, nil },
+		MkdirAll: func(path string, perm os.FileMode) error { return nil },
+		Exec:     func(s1 string, s2 ...string) ([]byte, error) { return nil, nil },
+		Create: func(s string) (io.WriteCloser, error) {
+			buf := &bufCloser{}
+			mock.buffers = append(mock.buffers, buf)
+			return buf, nil
+		},
+
+		NewDBClient: func(region, tableName string) (interfaces.DBClient, error) {
+			var err error
+			mock.dbClient, err = db.NewDynamoClientLocal(region, tableName)
+			return mock.dbClient, err
+		},
+		ReadFile: func(filename string) ([]byte, error) {
+			return ioutil.ReadFile(path.Join("..", "testdata", "trivy_output_sample1.json"))
+		},
+		TempFile: interfaces.DefaultTempFileFunc,
+		HTTP:     &mock.http,
+	})
+
+	dbClient := ctrl.DB()
+	t.Logf("dynamo table name: %s", dbClient.(*db.DynamoClient).TableName())
+
+	t.Cleanup(func() {
+		if !t.Failed() {
+			if err := ctrl.DB().Close(); err != nil {
+				t.Fatal("Can not close DB: ", err)
+			}
+		}
+	})
+
+	// ECR
+	mock.ecr.getTokenOutput = []*ecr.GetAuthorizationTokenOutput{
+		{
+			AuthorizationData: []*ecr.AuthorizationData{
+				{
+					AuthorizationToken: aws.String("fake_auth_token"),
+				},
+			},
+		},
+	}
+
+	manifestData := `{
+	"schemaVersion": 2,
+	"mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+	"config": {
+		"mediaType": "application/vnd.docker.container.image.v1+json",
+		"size": 7023,
+		"digest": "sha256:b5b2b2c507a0944348e0303114d8d93aaaa081732b86451d9bce1f432a537bc7"
+	},
+	"layers": [
+		{
+			"mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+			"size": 32654,
+			"digest": "sha256:e692418e4cbaf90ca69d05a66403747baa33ee08806650b51fab815ad7fc331f"
+		},
+		{
+			"mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+			"size": 16724,
+			"digest": "sha256:3c3a4604a545cdc127456d94e421cd355bca5b528f4a9c1905b15da2eb4a4c6b"
+		},
+		{
+			"mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+			"size": 73109,
+			"digest": "sha256:ec4b8955958665577945c89419d1af06b5f7636b4ac3da7f12184802ad867736"
+		}
+	]
+}`
+
+	// Requires only container_config.Env
+	configData := `{
+	"container": "0fba8b9abff35ecac0aab193b6222e74faf48d19829e7xxxxxxxxxxxxxxx",
+	"container_config": {
+		"Env": [
+			"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+			"DEBIAN_FRONTEND=noninteractive",
+			"LANG=C.UTF-8"
+		]
+	},
+	"created": "2021-03-11T01:19:55.595142316Z",
+	"os": "linux"
+}
+`
+	mock.http.responses = []*http.Response{
+		// for GetImageManifest
+		{
+			StatusCode: http.StatusOK,
+			Body:       ioutil.NopCloser(strings.NewReader(manifestData)),
+		},
+		// for GetImageEnv
+		{
+			StatusCode: http.StatusOK,
+			Body:       ioutil.NopCloser(strings.NewReader(configData)),
+		},
+	}
+
+	return ctrl, mock
 }

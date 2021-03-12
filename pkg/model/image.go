@@ -11,7 +11,12 @@ type TaggedImage struct {
 	Registry string
 	Repo     string
 	Tag      string
-	Digest   string `json:",omitempty"`
+}
+
+type Image struct {
+	Registry string
+	Repo     string
+	Digest   string
 }
 
 type ImageMeta struct {
@@ -25,7 +30,7 @@ func (x *TaggedImage) RegistryRepoTag() string {
 }
 
 // RegistryRepoDigest returns "{registry}/{repo}:{digest}"
-func (x *TaggedImage) RegistryRepoDigest() string {
+func (x *Image) RegistryRepoDigest() string {
 	return x.Registry + "/" + x.Repo + ":" + x.Digest
 }
 
@@ -43,6 +48,6 @@ func ParseRepositoryURI(uri string) (*TaggedImage, error) {
 }
 
 type ImageLayerIndex struct {
-	TaggedImage
+	Image
 	LayerDigest string
 }

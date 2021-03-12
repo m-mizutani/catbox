@@ -13,7 +13,7 @@ func TestImageLayerDigests(t *testing.T) {
 		client := newTestTable(t)
 
 		idx1 := &model.ImageLayerIndex{
-			TaggedImage: model.TaggedImage{
+			Image: model.Image{
 				Registry: "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
 				Repo:     "blue",
 				Digest:   "abc123",
@@ -21,7 +21,7 @@ func TestImageLayerDigests(t *testing.T) {
 			LayerDigest: "caffee",
 		}
 		idx2 := &model.ImageLayerIndex{
-			TaggedImage: model.TaggedImage{
+			Image: model.Image{
 				Registry: "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
 				Repo:     "orange",
 				Digest:   "321bca",
@@ -29,7 +29,7 @@ func TestImageLayerDigests(t *testing.T) {
 			LayerDigest: "beef00",
 		}
 		idx3 := &model.ImageLayerIndex{
-			TaggedImage: model.TaggedImage{
+			Image: model.Image{
 				Registry: "1111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
 				Repo:     "five",
 				Digest:   "112233",
