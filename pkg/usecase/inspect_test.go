@@ -50,7 +50,7 @@ func TestInspect(t *testing.T) {
 			// msg2: new RepoVulnStat notification
 			require.NoError(t, json.Unmarshal([]byte(*mock.sns.input[1].Message), &msg2))
 			assert.Equal(t, 0, len(msg2.NewVuln))
-			require.Equal(t, 4, len(msg2.UpdatedStatus))
+			require.Equal(t, 5, len(msg2.UpdatedStatus))
 			vulnIDs := make([]string, len(msg2.UpdatedStatus))
 			for i := range vulnIDs {
 				vulnIDs[i] = msg2.UpdatedStatus[i].VulnID
@@ -68,7 +68,7 @@ func TestInspect(t *testing.T) {
 				Tag:      "latest",
 			})
 			require.NoError(t, err)
-			assert.Equal(t, 4, len(stats))
+			assert.Equal(t, 5, len(stats))
 
 			vulnIDs := make([]string, len(stats))
 			for i := range vulnIDs {
@@ -78,6 +78,16 @@ func TestInspect(t *testing.T) {
 			assert.Contains(t, vulnIDs, "CVE-2017-15131")
 			assert.Contains(t, vulnIDs, "CVE-2020-7662")
 			assert.Contains(t, vulnIDs, "GHSA-p9pc-299p-vxgp")
+
+			var GHSAp9pc299pvxgpVersions []string
+			for _, s := range stats {
+				if s.VulnID == "GHSA-p9pc-299p-vxgp" {
+					GHSAp9pc299pvxgpVersions = append(GHSAp9pc299pvxgpVersions, s.PkgVersion)
+				}
+			}
+			assert.Equal(t, 2, len(GHSAp9pc299pvxgpVersions))
+			assert.Contains(t, GHSAp9pc299pvxgpVersions, "5.0.0")
+			assert.Contains(t, GHSAp9pc299pvxgpVersions, "13.1.1")
 		})
 	})
 
@@ -101,7 +111,7 @@ func TestInspect(t *testing.T) {
 			Tag:      "latest",
 		})
 		require.NoError(t, err)
-		assert.Equal(t, 4, len(stats))
+		assert.Equal(t, 5, len(stats))
 	})
 }
 

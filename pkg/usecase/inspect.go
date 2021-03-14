@@ -225,16 +225,12 @@ func reportToRepoVulnStatusMap(ctrl *controller.Controller, report *model.ScanRe
 }
 
 func calcDiff(beforeStatus, afterStatus []*model.RepoVulnStatus) *statusDiff {
-	remapStatus := func(statuses []*model.RepoVulnStatus) map[vulnKey]*model.RepoVulnStatus {
-		statusMap := make(map[vulnKey]*model.RepoVulnStatus)
+
+	remapStatus := func(statuses []*model.RepoVulnStatus) map[model.RepoVulnEntry]*model.RepoVulnStatus {
+		statusMap := make(map[model.RepoVulnEntry]*model.RepoVulnStatus)
 		for _, s := range statuses {
-			key := vulnKey{
-				source:  s.PkgSource,
-				pkgName: s.PkgName,
-				vulnID:  s.VulnID,
-			}
-			if exists, ok := statusMap[key]; !ok || exists.StatusSeq < s.StatusSeq {
-				statusMap[key] = s
+			if exists, ok := statusMap[s.RepoVulnEntry]; !ok || exists.StatusSeq < s.StatusSeq {
+				statusMap[s.RepoVulnEntry] = s
 			}
 		}
 
