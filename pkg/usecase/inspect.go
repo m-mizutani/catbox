@@ -34,6 +34,17 @@ func InspectScanReport(ctrl *controller.Controller, msg *model.InspectRequestMes
 		return nil
 	}
 
+	// Handle VulnInfo
+	vulnInfoSet, err := reportToVulnInfo(ctrl, scanReport)
+	if err != nil {
+		return err
+	}
+	if err := InsertVulnInfo(ctrl, vulnInfoSet); err != nil {
+		return err
+	}
+
+	// Handle RepoVulnStatus
+
 	afterStatus, err := reportToRepoVulnStatusMap(ctrl, scanReport)
 	if err != nil {
 		return err
@@ -59,9 +70,28 @@ func InspectScanReport(ctrl *controller.Controller, msg *model.InspectRequestMes
 	return nil
 }
 
+// InsertVulnInfo adds vulnInfo to DB and publish new vulnInfo
+func InsertVulnInfo(ctrl *controller.Controller, vulnInfoSet []*model.VulnInfo) error {
+	newVulns, err := ctrl.DB().PutVulnInfoBatch(vulnInfoSet)
+	if err != nil {
+		return err
+	}
+
+	if len(newVulns) == 0 {
+		return nil
+	}
+
+	if err := ctrl.PublishChangeMessage(&model.ChangeMessage{
+		NewVuln: newVulns,
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // InsertRepoVulnStatus adds new RepoVulnStatus set
 func InsertRepoVulnStatus(ctrl *controller.Controller, newStatuses []*model.RepoVulnStatus) error {
-
 	var inserted []*model.RepoVulnStatus
 	for _, status := range newStatuses {
 		done, err := ctrl.DB().CreateRepoVulnStatus(status)
@@ -81,6 +111,7 @@ func InsertRepoVulnStatus(ctrl *controller.Controller, newStatuses []*model.Repo
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -121,6 +152,46 @@ func UpdateRepoVulnStatus(ctrl *controller.Controller, originals []*model.RepoVu
 	return nil
 }
 
+func reportToVulnInfo(ctrl *controller.Controller, report *model.ScanReport) ([]*model.VulnInfo, error) {
+	results, err := ctrl.DownloadTrivyReport(&report.OutputTo)
+	if err != nil {
+		return nil, err
+	}
+
+	vulnMap := make(map[string]*model.VulnInfo)
+	for _, source := range results {
+		for _, vuln := range source.Vulnerabilities {
+			cvssMap := map[string]string{}
+			for vendor, cvss := range vuln.CVSS {
+				if cvss.V2Vector != "" {
+					cvssMap[vendor+"/v2"] = cvss.V2Vector
+				}
+				if cvss.V3Vector != "" {
+					cvssMap[vendor+"/v3"] = cvss.V3Vector
+				}
+			}
+
+			vulnMap[vuln.VulnerabilityID] = &model.VulnInfo{
+				ID:          vuln.VulnerabilityID,
+				Type:        model.VulnPkg,
+				CVSS:        cvssMap,
+				Title:       vuln.Title,
+				Description: vuln.Description,
+				References:  vuln.References,
+				DetectedAt:  report.ScannedAt,
+				PkgType:     source.Type,
+				PkgName:     vuln.PkgName,
+			}
+		}
+	}
+
+	var vulnSet []*model.VulnInfo
+	for _, vuln := range vulnMap {
+		vulnSet = append(vulnSet, vuln)
+	}
+	return vulnSet, nil
+}
+
 func reportToRepoVulnStatusMap(ctrl *controller.Controller, report *model.ScanReport) ([]*model.RepoVulnStatus, error) {
 	results, err := ctrl.DownloadTrivyReport(&report.OutputTo)
 	if err != nil {
@@ -133,19 +204,19 @@ func reportToRepoVulnStatusMap(ctrl *controller.Controller, report *model.ScanRe
 			statuses = append(statuses, &model.RepoVulnStatus{
 				TaggedImage: report.TaggedImage,
 				RepoVulnEntry: model.RepoVulnEntry{
-					VulnID:    vuln.VulnerabilityID,
-					VulnType:  model.VulnPkg,
-					PkgSource: source.Target,
-					PkgName:   vuln.PkgName,
+					VulnID:     vuln.VulnerabilityID,
+					VulnType:   model.VulnPkg,
+					PkgSource:  source.Target,
+					PkgName:    vuln.PkgName,
+					PkgVersion: vuln.InstalledVersion,
 				},
-				UpdatedAt:           report.ScannedAt,
-				Status:              model.VulnStatusNew,
-				DetectedBy:          report.ScannedBy,
-				StatusSeq:           report.StatusSeq,
-				PkgType:             source.Type,
-				PkgInstalledVersion: vuln.FixedVersion,
-				PkgFixedVersion:     vuln.FixedVersion,
-				Description:         "",
+				UpdatedAt:       report.ScannedAt,
+				Status:          model.VulnStatusNew,
+				DetectedBy:      report.ScannedBy,
+				StatusSeq:       report.StatusSeq,
+				PkgType:         source.Type,
+				PkgFixedVersion: vuln.FixedVersion,
+				Description:     "",
 			})
 		}
 	}

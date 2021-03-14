@@ -40,16 +40,19 @@ func setupVulnInfoTest(t *testing.T) (interfaces.DBClient, []*model.VulnInfo) {
 			ID:         "CVE-2001-0001",
 			Title:      "blue",
 			DetectedAt: 1000,
+			References: []string{},
 		},
 		{
 			ID:         "CVE-2001-0002",
 			Title:      "orange",
 			DetectedAt: 1000,
+			References: []string{},
 		},
 		{
 			ID:         "CVE-2001-0003",
 			Title:      "red",
 			DetectedAt: 1000,
+			References: []string{},
 		},
 	}
 	newVuln, err := client.PutVulnInfoBatch(vulnInfoSet)

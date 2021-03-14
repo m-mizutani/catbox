@@ -20,7 +20,7 @@ import (
 
 func TestInspect(t *testing.T) {
 	t.Run("Error with invalid report ID", func(t *testing.T) {
-		ctrl, _ := newControllerForInspectTest(t)
+		ctrl, _ := setupControllerForInspectTest(t)
 		req := &model.InspectRequestMessage{
 			ReportID: "no-such-report",
 		}
@@ -29,7 +29,7 @@ func TestInspect(t *testing.T) {
 	})
 
 	t.Run("Normal case", func(t *testing.T) {
-		ctrl, mock := newControllerForInspectTest(t)
+		ctrl, mock := setupControllerForInspectTest(t)
 		req := &model.InspectRequestMessage{
 			ReportID: "report-id-1",
 		}
@@ -39,13 +39,21 @@ func TestInspect(t *testing.T) {
 
 		// Check outputs
 		t.Run("Published change message to SNS", func(t *testing.T) {
-			require.Equal(t, 1, len(mock.sns.input))
-			var msg model.ChangeMessage
-			require.NoError(t, json.Unmarshal([]byte(*mock.sns.input[0].Message), &msg))
-			require.Equal(t, 4, len(msg.UpdatedStatus))
-			vulnIDs := make([]string, len(msg.UpdatedStatus))
+			require.Equal(t, 2, len(mock.sns.input))
+
+			var msg1, msg2 model.ChangeMessage
+			// msg1: new vulnerabilities notification
+			require.NoError(t, json.Unmarshal([]byte(*mock.sns.input[0].Message), &msg1))
+			require.Equal(t, 4, len(msg1.NewVuln))
+			require.Equal(t, 0, len(msg1.UpdatedStatus))
+
+			// msg2: new RepoVulnStat notification
+			require.NoError(t, json.Unmarshal([]byte(*mock.sns.input[1].Message), &msg2))
+			assert.Equal(t, 0, len(msg2.NewVuln))
+			require.Equal(t, 4, len(msg2.UpdatedStatus))
+			vulnIDs := make([]string, len(msg2.UpdatedStatus))
 			for i := range vulnIDs {
-				vulnIDs[i] = msg.UpdatedStatus[i].VulnID
+				vulnIDs[i] = msg2.UpdatedStatus[i].VulnID
 			}
 			assert.Contains(t, vulnIDs, "CVE-2020-27350")
 			assert.Contains(t, vulnIDs, "CVE-2017-15131")
@@ -72,9 +80,32 @@ func TestInspect(t *testing.T) {
 			assert.Contains(t, vulnIDs, "GHSA-p9pc-299p-vxgp")
 		})
 	})
+
+	t.Run("Check idempotence", func(t *testing.T) {
+		ctrl, mock := setupControllerForInspectTest(t)
+		req := &model.InspectRequestMessage{
+			ReportID: "report-id-1",
+		}
+
+		// Run usecase twice
+		assert.NoError(t, usecase.InspectScanReport(ctrl, req))
+		assert.NoError(t, usecase.InspectScanReport(ctrl, req))
+
+		// No additional vulnInfo and RepoVulnStatus is not updated
+		require.Equal(t, 2, len(mock.sns.input))
+
+		// Number of RepoVulnStatus is still 4
+		stats, err := mock.dbClient.GetRepoVulnStatusByRepo(&model.TaggedImage{
+			Registry: "111111111111.dkr.ecr.ap-northeast-1.amazonaws.com",
+			Repo:     "strix",
+			Tag:      "latest",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, 4, len(stats))
+	})
 }
 
-func newControllerForInspectTest(t *testing.T) (*controller.Controller, *mockSet) {
+func setupControllerForInspectTest(t *testing.T) (*controller.Controller, *mockSet) {
 	mock := &mockSet{}
 
 	ctrl := &controller.Controller{

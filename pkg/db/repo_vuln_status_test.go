@@ -18,19 +18,19 @@ func newRepoVulnStatusTemplate() *model.RepoVulnStatus {
 		},
 
 		RepoVulnEntry: model.RepoVulnEntry{
-			VulnID:    "CVE-2001-1234",
-			VulnType:  model.VulnPkg,
-			PkgSource: "/tmp/Gemfile.lock",
-			PkgName:   "nanika",
+			VulnID:     "CVE-2001-1234",
+			VulnType:   model.VulnPkg,
+			PkgSource:  "/tmp/Gemfile.lock",
+			PkgName:    "nanika",
+			PkgVersion: "1.1",
 		},
 		UpdatedAt:  12345,
 		Status:     model.VulnStatusNew,
 		DetectedBy: model.ScannerTrivy,
 		StatusSeq:  5,
 
-		PkgType:             "bundler",
-		PkgInstalledVersion: "1.1",
-		PkgFixedVersion:     "1.2",
+		PkgType:         "bundler",
+		PkgFixedVersion: "1.2",
 	}
 }
 
@@ -92,10 +92,11 @@ func TestRepoVulnStatus(t *testing.T) {
 					Tag:      "good-tag",
 				},
 				RepoVulnEntry: model.RepoVulnEntry{
-					VulnID:    "CVE-2001-1234",
-					VulnType:  model.VulnPkg,
-					PkgSource: "/tmp/Gemfile.lock",
-					PkgName:   "nanika",
+					VulnID:     "CVE-2001-1234",
+					VulnType:   model.VulnPkg,
+					PkgSource:  "/tmp/Gemfile.lock",
+					PkgName:    "nanika",
+					PkgVersion: "1.1",
 				},
 				Status:    model.VulnStatusFixed,
 				UpdatedAt: 1234,
@@ -202,6 +203,14 @@ func TestRepoVulnStatus(t *testing.T) {
 			t.Run("Non existing pkg name", func(t *testing.T) {
 				c := genBaseChangeLog()
 				c.PkgSource = "non-exist-pkg"
+				updated, err := client.UpdateRepoVulnStatus(c)
+				assert.NoError(t, err)
+				assert.False(t, updated)
+			})
+
+			t.Run("Non existing pkg version", func(t *testing.T) {
+				c := genBaseChangeLog()
+				c.PkgVersion = "0.1"
 				updated, err := client.UpdateRepoVulnStatus(c)
 				assert.NoError(t, err)
 				assert.False(t, updated)

@@ -22,7 +22,7 @@ type (
 		getObjectInput []*s3.GetObjectInput
 		putObjectInput []*s3.PutObjectInput
 
-		objects map[string]map[string]*s3.GetObjectOutput
+		objects map[string]map[string]interface{}
 	}
 	mockSQS struct {
 		input []*sqs.SendMessageInput
@@ -58,21 +58,9 @@ func (x *mockS3) GetObject(input *s3.GetObjectInput) (*s3.GetObjectOutput, error
 	if !ok {
 		return nil, errors.New(s3.ErrCodeNoSuchBucket)
 	}
-	out, ok := bucket[*input.Key]
+	obj, ok := bucket[*input.Key]
 	if !ok {
 		return nil, errors.New(s3.ErrCodeNoSuchKey)
-	}
-	return out, nil
-}
-
-func (x *mockS3) PutObject(input *s3.PutObjectInput) (*s3.PutObjectOutput, error) {
-	x.putObjectInput = append(x.putObjectInput, input)
-	return &s3.PutObjectOutput{}, nil
-}
-
-func (x *mockS3) saveObject(bucket, key string, obj interface{}) {
-	if x.objects == nil {
-		x.objects = make(map[string]map[string]*s3.GetObjectOutput)
 	}
 
 	var reader io.Reader
@@ -88,16 +76,28 @@ func (x *mockS3) saveObject(bucket, key string, obj interface{}) {
 		}
 		reader = bytes.NewReader(raw)
 	}
+	return &s3.GetObjectOutput{
+		Body: ioutil.NopCloser(reader),
+	}, nil
+}
+
+func (x *mockS3) PutObject(input *s3.PutObjectInput) (*s3.PutObjectOutput, error) {
+	x.putObjectInput = append(x.putObjectInput, input)
+	return &s3.PutObjectOutput{}, nil
+}
+
+func (x *mockS3) saveObject(bucket, key string, obj interface{}) {
+	if x.objects == nil {
+		x.objects = make(map[string]map[string]interface{})
+	}
 
 	bkt, ok := x.objects[bucket]
 	if !ok {
-		bkt = make(map[string]*s3.GetObjectOutput)
+		bkt = make(map[string]interface{})
 		x.objects[bucket] = bkt
 	}
 
-	bkt[key] = &s3.GetObjectOutput{
-		Body: ioutil.NopCloser(reader),
-	}
+	bkt[key] = obj
 }
 
 func (x *mockSQS) SendMessage(input *sqs.SendMessageInput) (*sqs.SendMessageOutput, error) {
