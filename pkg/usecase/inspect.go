@@ -3,6 +3,7 @@ package usecase
 import (
 	"github.com/m-mizutani/catbox/pkg/controller"
 	"github.com/m-mizutani/catbox/pkg/model"
+	"github.com/m-mizutani/catbox/pkg/utils"
 	"github.com/m-mizutani/golambda"
 )
 
@@ -29,12 +30,7 @@ func InspectScanReport(ctrl *controller.Controller, msg *model.InspectRequestMes
 		return golambda.WrapError(ErrReportNotFound).With("msg", msg)
 	}
 
-	img := scanReport.TaggedImage
-	if img.Tag != "latest" { // TODO: It will be replaced to check repoConfig
-		return nil
-	}
-
-	// Handle VulnInfo
+	// Register new vulnerabilities to DB even if non-scoped image tag
 	vulnInfoSet, err := reportToVulnInfo(ctrl, scanReport)
 	if err != nil {
 		return err
@@ -43,8 +39,13 @@ func InspectScanReport(ctrl *controller.Controller, msg *model.InspectRequestMes
 		return err
 	}
 
-	// Handle RepoVulnStatus
+	img := scanReport.TaggedImage
+	if img.Tag != "latest" { // TODO: It will be replaced to check repoConfig
+		logger.With("img", img).Info("Skip RepoVulnStatus process because of non-scoped tag")
+		return nil
+	}
 
+	// Handle RepoVulnStatus
 	afterStatus, err := reportToRepoVulnStatusMap(ctrl, scanReport)
 	if err != nil {
 		return err
@@ -56,6 +57,11 @@ func InspectScanReport(ctrl *controller.Controller, msg *model.InspectRequestMes
 	}
 
 	diff := calcDiff(beforeStatus, afterStatus)
+	logger.
+		With("added", len(diff.Added)).
+		With("fixed", len(diff.Fixed)).
+		With("regressed", diff.Regressed).
+		Info("Diff result")
 
 	if err := InsertRepoVulnStatus(ctrl, diff.Added); err != nil {
 		return err
@@ -81,12 +87,19 @@ func InsertVulnInfo(ctrl *controller.Controller, vulnInfoSet []*model.VulnInfo) 
 		return nil
 	}
 
-	if err := ctrl.PublishChangeMessage(&model.ChangeMessage{
-		NewVuln: newVulns,
-	}); err != nil {
-		return err
-	}
+	// SNS message size limitation is 256KB. Assuming maximum size of repoVulnInfo is under 2KB and set batch size to 128
+	const batchSize = 128
 
+	for s := 0; s < len(newVulns); s += batchSize {
+		e := utils.Min(s+batchSize, len(newVulns))
+		msg := model.ChangeMessage{
+			NewVuln: newVulns[s:e],
+		}
+
+		if err := ctrl.PublishChangeMessage(&msg); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -103,9 +116,17 @@ func InsertRepoVulnStatus(ctrl *controller.Controller, newStatuses []*model.Repo
 		}
 	}
 
-	if len(inserted) > 0 {
+	if len(inserted) == 0 {
+		return nil
+	}
+
+	// SNS message size limitation is 256KB. Assuming maximum size of repoVulnInfo is under 2KB and set batch size to 128
+	const batchSize = 128
+
+	for s := 0; s < len(inserted); s += batchSize {
+		e := utils.Min(s+batchSize, len(inserted))
 		msg := model.ChangeMessage{
-			UpdatedStatus: inserted,
+			UpdatedStatus: inserted[s:e],
 		}
 		if err := ctrl.PublishChangeMessage(&msg); err != nil {
 			return err
@@ -140,9 +161,17 @@ func UpdateRepoVulnStatus(ctrl *controller.Controller, originals []*model.RepoVu
 		}
 	}
 
-	if len(updated) > 0 {
+	if len(updated) == 0 {
+		return nil
+	}
+
+	// SNS message size limitation is 256KB. Assuming maximum size of repoVulnInfo is under 2KB and set batch size to 128
+	const batchSize = 128
+
+	for s := 0; s < len(updated); s += batchSize {
+		e := utils.Min(s+batchSize, len(updated))
 		msg := model.ChangeMessage{
-			UpdatedStatus: updated,
+			UpdatedStatus: updated[s:e],
 		}
 		if err := ctrl.PublishChangeMessage(&msg); err != nil {
 			return err
