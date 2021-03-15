@@ -73,6 +73,10 @@ func (x *DynamoClient) PutVulnInfoBatch(vulnInfoSet []*model.VulnInfo) ([]*model
 
 // GetVulnInfoBatch returns vulnInfo
 func (x *DynamoClient) GetVulnInfoBatch(vulnIDs []string) ([]*model.VulnInfo, error) {
+	if len(vulnIDs) == 0 {
+		return nil, nil
+	}
+
 	var records []*dynamoRecord
 	keys := make([]dynamo.Keyed, len(vulnIDs))
 	for i := 0; i < len(keys); i++ {
