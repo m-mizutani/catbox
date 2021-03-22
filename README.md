@@ -10,8 +10,9 @@ Vulnerability scan and management serverless system for AWS ECR images with [Tri
 
 ### Prerequisite
 
+- npm >= 7.6.3
 - aws-cdk >= 1.90.0
-
+- Go >= 1.15
 ## Development
 
 ### Test

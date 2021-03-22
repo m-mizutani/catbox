@@ -23,7 +23,9 @@ func main() {
 
 		gin.SetMode(gin.ReleaseMode)
 		engine := gin.Default()
-		api.SetupBase(engine, ctrl)
+		api.SetupBase(engine, ctrl, &api.Config{
+			ContentDir: "assets",
+		})
 		api.SetupAssets(engine)
 		api.SetupAPI(engine)
 

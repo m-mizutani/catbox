@@ -1,3 +1,5 @@
+ROOT := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+ASSET_OUTPUT = /asset-output
 LAMBDA_SRC = pkg/*/*.go
 LAMBDA_FUNCTIONS = \
 	build/apiHandler \
@@ -36,5 +38,15 @@ $(TRIVY_BIN):
 	mv $(TRIVY_TMPDIR)/trivy $(TRIVY_BIN)
 	rm -r $(TRIVY_TMPDIR)
 
-asset: trivy lambda
-	cp build/* /asset-output/
+FRONTEND_DIR = $(ROOT)/frontend
+BUNDLE_JS = $(FRONTEND_DIR)/dist/bundle.js
+JS_SRC = $(FRONTEND_DIR)/src/js/*.tsx
+
+$(BUNDLE_JS): $(JS_SRC)
+	cd $(FRONTEND_DIR) && npm i && npm exec webpack && cd $(ROOT)
+
+js: $(BUNDLE_JS)
+
+asset: trivy lambda js
+	cp build/* $(ASSET_OUTPUT)
+	cp -r frontend/dist $(ASSET_OUTPUT)/assets
