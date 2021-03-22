@@ -11,20 +11,10 @@ module.exports = {
         test: /\.tsx?$/,
         use: "ts-loader",
       },
-      {
-        test: /\.js?$/,
-        exclude: /node_modules/,
-        use: "babel-loader",
-      },
-      {
-        test: /\.jsx?$/,
-        exclude: /node_modules/,
-        use: "babel-loader",
-      },
     ],
   },
   resolve: {
-    extensions: [".ts", ".tsx", ".js", ".jsx", ".json"],
+    extensions: [".ts", ".tsx", ".js", ".json"],
   },
   devServer: {
     contentBase: "dist",
