@@ -1,16 +1,9 @@
 import * as React from "react";
 import * as ReactDOM from "react-dom";
-import { Button } from "@material-ui/core";
+import Paperbase from "./components/Paperbase/Paperbase";
 
-class App extends React.Component {
-  render() {
-    return (
-      <div>
-        <h1>Hello React!</h1>
-        <Button color="primary">Hey Hey Hey</Button>
-      </div>
-    );
-  }
+function App() {
+  return <Paperbase />;
 }
 
 ReactDOM.render(<App />, document.querySelector("#app"));

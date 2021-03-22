@@ -3,18 +3,28 @@ module.exports = {
   entry: "./src/js/main.tsx",
   output: {
     path: `${__dirname}/dist`,
-    filename: "bundle.js"
+    filename: "bundle.js",
   },
   module: {
     rules: [
       {
         test: /\.tsx?$/,
-        use: "ts-loader"
-      }
-    ]
+        use: "ts-loader",
+      },
+      {
+        test: /\.js?$/,
+        exclude: /node_modules/,
+        use: "babel-loader",
+      },
+      {
+        test: /\.jsx?$/,
+        exclude: /node_modules/,
+        use: "babel-loader",
+      },
+    ],
   },
   resolve: {
-    extensions: [".ts", ".tsx", ".js", ".json"]
+    extensions: [".ts", ".tsx", ".js", ".jsx", ".json"],
   },
   devServer: {
     contentBase: "dist",
