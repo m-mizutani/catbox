@@ -1,4 +1,7 @@
-*.js
+bin/*.js
+lib/*.js
+frontend/src/js/*.js
+frontend/dist/*.js
 !jest.config.js
 *.d.ts
 node_modules
